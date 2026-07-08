@@ -1050,7 +1050,8 @@ const mw=$("#mapwrap");
 /* ============ Zoom & desktop drag-to-pan ============ */
 const ZMIN=.6,ZMAX=3;
 const IS_DESKTOP=window.matchMedia("(hover:hover) and (pointer:fine)").matches;
-let ZOOM=window.matchMedia("(min-width:900px)").matches?1.5:1;
+const Z0=window.matchMedia("(min-width:900px)").matches?1.5:1; // one default zoom, reused by reset
+let ZOOM=Z0;
 function applyZoom(cx,cy){
   ZOOM=clamp(ZOOM,ZMIN,ZMAX);
   // keep the content point under (cx,cy) — default: viewport centre — stable across the zoom
@@ -1066,7 +1067,7 @@ let _prevZoom=ZOOM;
 function zoomBy(f,cx,cy){ZOOM=clamp(ZOOM*f,ZMIN,ZMAX);applyZoom(cx,cy);}
 $("#zoomIn").onclick=()=>zoomBy(1.25);
 $("#zoomOut").onclick=()=>zoomBy(1/1.25);
-$("#zoomReset").onclick=()=>{ZOOM=IS_DESKTOP?1.5:1;applyZoom();};
+$("#zoomReset").onclick=()=>{ZOOM=Z0;applyZoom();};
 
 /* initial sizing + centre */
 _svg.setAttribute("width",r1(MW*ZOOM));
