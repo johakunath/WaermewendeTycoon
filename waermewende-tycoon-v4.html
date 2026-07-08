@@ -47,9 +47,15 @@ main{flex:1;min-height:0;padding:4px 6px 6px;}
 #p-team,#p-news{overflow-y:auto;padding-bottom:6px;}
 
 /* ---------- Iso map ---------- */
+#p-map{position:relative;}
 .mapwrap{background:#BFE3F2;border-radius:14px;box-shadow:var(--shadow);height:100%;
   overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;}
 .mapwrap svg{display:block;}
+.mapwrap.grabbing{cursor:grabbing;}
+.zoomctl{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:5;}
+.zoomctl button{width:38px;height:38px;background:var(--card);color:var(--ink);border-radius:11px;
+  font-size:21px;font-weight:800;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;line-height:1;}
+.zoomctl button:active{transform:translateY(1px);}
 .bld{cursor:pointer;touch-action:manipulation;}
 .bld polygon{stroke:rgba(38,50,63,.35);stroke-width:1;stroke-linejoin:round;}
 .bld:active polygon{filter:brightness(1.08);}
@@ -132,6 +138,63 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
 .endstats{display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap;}
 .endstats div{background:#FBF4E4;border-radius:12px;padding:8px 12px;font-size:12px;font-weight:800;}
 .endstats b{display:block;font-size:17px;}
+/* ---------- Desktop: bigger everything + roomier map ---------- */
+@media (min-width:900px){
+  header{padding:10px 22px;gap:12px;}
+  header .title{font-size:23px;letter-spacing:.4px;}
+  .datechip{font-size:15px;padding:5px 12px;border-radius:11px;}
+  #seedchip{font-size:13px!important;}
+  .speedbtn{width:44px;height:37px;font-size:18px;border-radius:11px;}
+  .thermo{padding:0 22px 10px;}
+  .thermo .bar{height:24px;border-radius:12px;}
+  .thermo .lbl{font-size:15px;}
+  .thermo .ends{font-size:16px;padding:0 9px;}
+  .stats{gap:9px;padding:9px 18px;justify-content:center;flex-wrap:wrap;overflow-x:visible;}
+  .chip{font-size:14px;padding:6px 13px;border-radius:12px;cursor:default;}
+  .chip b{font-size:15px;}
+  main{padding:8px 18px 14px;}
+  #p-team,#p-news{max-width:780px;margin:0 auto;}
+  .mapwrap{border-radius:18px;cursor:grab;}
+  .zoomctl button{width:46px;height:46px;font-size:25px;}
+  .card{padding:18px 20px;border-radius:20px;margin-bottom:14px;}
+  .card h3{font-size:21px;margin-bottom:6px;}
+  .card p{font-size:15px;margin-bottom:10px;}
+  .card.jv ul{font-size:15px;}
+  .buy{font-size:17px;padding:11px 22px;border-radius:14px;}
+  .prio{gap:9px;}
+  .pbtn{font-size:15px;padding:12px 6px;border-radius:14px;}
+  .pbtn small{font-size:12px;}
+  table.pl{font-size:16px;}
+  table.pl td{padding:5px 0;}
+  .news{padding:12px 22px;border-radius:20px;}
+  .news div{font-size:15px;padding:10px 0;}
+  .news div b{font-size:13px;}
+  nav{padding:8px 18px;gap:14px;max-width:780px;margin:0 auto;width:100%;}
+  nav button{font-size:13px;padding:8px 0 6px;border-radius:14px;}
+  nav button span{font-size:25px;}
+  .sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);
+    width:540px;max-width:92vw;border-radius:22px;max-height:88vh;}
+  .sheet h2{font-size:25px;}
+  .sheet .sub{font-size:14px;}
+  .sheet .quote{font-size:15px;padding:11px 15px;}
+  .facts{font-size:15px;}
+  .facts td{padding:6px 0;}
+  .bigbtn{font-size:18px;padding:14px;border-radius:16px;}
+  .chance{font-size:15px;}
+  .toasts{left:auto;right:22px;top:104px;max-width:380px;}
+  .toast{font-size:14px;padding:11px 16px;}
+  .obox{max-width:560px;padding:28px 26px;}
+  .obox h1{font-size:34px;}
+  .obox .tag{font-size:15px;}
+  .obox ul{font-size:16px;}
+  .obox li{margin-bottom:8px;}
+  .endstats div{font-size:14px;padding:10px 16px;}
+  .endstats b{font-size:20px;}
+}
+/* On desktop the sheet is centered; slide-fade without breaking the centering transform */
+@media (min-width:900px){
+  @keyframes up{from{transform:translate(-50%,-46%);opacity:0}to{transform:translate(-50%,-50%);opacity:1}}
+}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
 </style>
 </head>
@@ -139,10 +202,10 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
 
 <header>
   <div class="title">WÄRMEWENDE TYCOON</div>
-  <div class="datechip" id="date">Jan 26</div>
-  <div class="datechip" id="seedchip" style="display:none;background:#4a3870;font-size:10px"></div>
-  <button class="speedbtn" id="btnPause">⏸</button>
-  <button class="speedbtn" id="btnFast">⏩</button>
+  <div class="datechip" id="date" title="Aktueller Spielmonat">Jan 26</div>
+  <div class="datechip" id="seedchip" style="display:none;background:#4a3870;font-size:10px" title="Karten-Seed – teile die URL, um dieselbe Stadt zu spielen"></div>
+  <button class="speedbtn" id="btnPause" title="Pause / Weiter">⏸</button>
+  <button class="speedbtn" id="btnFast" title="Schnelles Tempo an/aus">⏩</button>
 </header>
 <div class="thermo">
   <div class="bar">
@@ -157,6 +220,11 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
 <main>
   <section class="panel on" id="p-map">
     <div class="mapwrap" id="mapwrap"></div>
+    <div class="zoomctl">
+      <button id="zoomIn" title="Reinzoomen (Mausrad hoch)" aria-label="Reinzoomen">＋</button>
+      <button id="zoomOut" title="Rauszoomen (Mausrad runter)" aria-label="Rauszoomen">－</button>
+      <button id="zoomReset" title="Zoom zurücksetzen" aria-label="Zoom zurücksetzen">⤢</button>
+    </div>
   </section>
   <section class="panel" id="p-team"></section>
   <section class="panel" id="p-news">
@@ -165,9 +233,9 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
 </main>
 
 <nav>
-  <button class="on" data-p="map"><span>🗺️</span>Stadt</button>
-  <button data-p="team" id="navTeam"><span>👷</span>Firma</button>
-  <button data-p="news"><span>📰</span>News</button>
+  <button class="on" data-p="map" title="Stadtkarte – tippe auf Gebäude"><span>🗺️</span>Stadt</button>
+  <button data-p="team" id="navTeam" title="Deine Firma: Monteure, Vertrieb, Finanzen"><span>👷</span>Firma</button>
+  <button data-p="news" title="Neuigkeiten & Ereignisse"><span>📰</span>News</button>
 </nav>
 
 <div class="sheetwrap" id="sheetwrap">
@@ -206,6 +274,7 @@ const ri=(a,b)=>Math.floor(rnd(a,b+1));
 const pick=a=>a[Math.floor(Math.random()*a.length)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const r1=n=>Math.round(n*10)/10;
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
 function shade(hex,f){const n=parseInt(hex.slice(1),16);
   const r=clamp(Math.round(((n>>16)&255)*f),0,255),g=clamp(Math.round(((n>>8)&255)*f),0,255),
@@ -550,7 +619,12 @@ function scaffold(b,h){
 function drawBuilding(b){
   const h=b.floors*FLPX,m=.18;
   const pA=iso(b.gx-m,b.gy-m),pB=iso(b.gx+b.w+m,b.gy-m),pC=iso(b.gx+b.w+m,b.gy+b.d+m),pD=iso(b.gx-m,b.gy+b.d+m);
-  let s=`<g class="bld" data-id="${b.id}">`;
+  const stLbl=b.status==="aktiv"?"🌱 Wärmepumpe läuft":
+    b.status==="umbau"?`🏗️ im Umbau (${b.done}/${b.units} WE)`:
+    b.status==="kessel"?"♨️ dein Kesseltausch-Kunde – Upgrade offen":
+    b.status==="komp"?`${b.comp.emoji} bei ${b.comp.name}`:
+    "💨 frei – noch fossil";
+  let s=`<g class="bld" data-id="${b.id}"><title>${esc(`${TYPES[b.t].e} ${b.name} · ${TYPES[b.t].l} · ${b.units} WE\n${stLbl}`)}</title>`;
   s+=`<polygon points="${pA.X},${pA.Y} ${pB.X},${pB.Y} ${pC.X},${pC.Y} ${pD.X},${pD.Y}" fill="${statusColor(b)}" opacity="${b.status==="frei"?.5:.95}" stroke="rgba(38,50,63,.4)"/>`;
   s+=b.body;
   if(b.status==="umbau")s+=scaffold(b,h);
@@ -609,20 +683,20 @@ function render(){
   $("#shareLbl").textContent="Dekarbonisiert "+sh+" %";
   const queue=S.buildings.filter(b=>b.status==="umbau").reduce((a,b)=>a+(b.units-b.done),0);
   $("#stats").innerHTML=
-    chip("💰",fmt(S.money),S.money<0?"bad":"")+
-    chip("🤝 Kunden",Math.round(custShare()*100)+" %","")+
-    chip("⭐ Ruf",S.rep,"")+
-    chip("🌱",Math.round(S.co2)+" t CO₂/a","good")+
-    chip("⚡","×"+S.energy.toFixed(2),S.energy>1.15?"good":"")+
-    chip("🏛️",Math.round(effSub()*100)+" %",effSub()<.1?"bad":"")+
-    chip("👷",S.installers,"")+
-    chip("💼",S.sellers,"")+
-    chip("🚧",queue+" WE","");
+    chip("💰",fmt(S.money),S.money<0?"bad":"","Kontostand – bei unter −150.000 € ist Schluss")+
+    chip("🤝 Kunden",Math.round(custShare()*100)+" %","","Anteil der Wohneinheiten, die schon deine Kunden sind. Ab 25 % gibt es Joint Ventures.")+
+    chip("⭐ Ruf",S.rep,"","Ruf (0–100) – höherer Ruf verbessert deine Abschlusschance")+
+    chip("🌱",Math.round(S.co2)+" t CO₂/a","good","Eingespartes CO₂ pro Jahr")+
+    chip("⚡","×"+S.energy.toFixed(2),S.energy>1.15?"good":"","Energiepreis-Faktor – höher = höhere Raten und leichtere Akquise")+
+    chip("🏛️",Math.round(effSub()*100)+" %",effSub()<.1?"bad":"","Aktuelle Förderquote auf die Wärmepumpen-CAPEX")+
+    chip("👷",S.installers,"","Monteure – bestimmen dein Umbau-Tempo (Umbau-WE pro Monat)")+
+    chip("💼",S.sellers,"","Vertriebler – erhöhen die Abschlusschance")+
+    chip("🚧",queue+" WE","","Wohneinheiten, die aktuell im Umbau sind");
   document.querySelector("#navTeam .pip")?.remove();
   if(S.jv)$("#navTeam").insertAdjacentHTML("beforeend",'<div class="pip"></div>');
   renderMap();renderTeam();renderNews();
 }
-const chip=(l,v,c)=>`<div class="chip ${c}">${l} <b>${v}</b></div>`;
+const chip=(l,v,c,t)=>`<div class="chip ${c}"${t?` title="${esc(t)}"`:""}>${l} <b>${v}</b></div>`;
 
 function jvCard(){
   if(!S.jvUnlocked)return `<div class="card jv"><h3>🤝 Joint Venture</h3>
@@ -651,27 +725,27 @@ function renderTeam(){
     </table></div>
   <div class="card"><h3>🎯 Prioritäten</h3><p>Worauf sich dein Team gerade konzentriert:</p>
     <div class="prio">${Object.entries(PRIOS).map(([k,v])=>
-      `<button class="pbtn ${S.prio===k?"on":""}" onclick="setPrio('${k}')">${v.e} ${v.l}<small>${v.d}</small></button>`).join("")}
+      `<button class="pbtn ${S.prio===k?"on":""}" onclick="setPrio('${k}')" title="${esc(v.d.replace(/<br>/g," · "))}">${v.e} ${v.l}<small>${v.d}</small></button>`).join("")}
     </div></div>
   ${jvCard()}
   <div class="card"><div class="row"><div>
     <h3>👷 Monteur anheuern</h3><p>+${BAL.convWE} WE Umbau/Monat. 12.000 € plus ${fmt(BAL.salary)}/Monat Gehalt (und Kaffee).</p></div>
-    <button class="buy" onclick="hire()" ${S.money<12000?"disabled":""}>12.000 €</button></div></div>
+    <button class="buy" onclick="hire()" title="Einmalig 12.000 € + ${fmt(BAL.salary)}/Monat. Erhöht das Umbau-Tempo." ${S.money<12000?"disabled":""}>12.000 €</button></div></div>
   <div class="card"><div class="row"><div>
     <h3>💼 Vertriebler einstellen</h3><p>+4 % Abschlusschance. ${fmt(BAL.salarySeller)}/Monat. Bringt eigene Anekdoten mit. (${S.sellers}/${BAL.maxSellers})</p></div>
-    <button class="buy" onclick="hireSeller()" ${S.money<8000||S.sellers>=BAL.maxSellers?"disabled":""}>8.000 €</button></div></div>
+    <button class="buy" onclick="hireSeller()" title="Einmalig 8.000 € + ${fmt(BAL.salarySeller)}/Monat. +4 % Abschlusschance." ${S.money<8000||S.sellers>=BAL.maxSellers?"disabled":""}>8.000 €</button></div></div>
   <div class="card"><div class="row"><div>
     <h3>🔬 F&E: „WärmeWumme 3000“</h3><p>Eigene Wärmepumpen-Baureihe: Rate dauerhaft +${Math.round(BAL.rndBoost*100)} %. ${S.rnd?"✅ Läuft. Sie brummt beruhigend.":"Einmalige Investition."}</p></div>
-    <button class="buy" onclick="doRnd()" ${S.rnd||S.money<BAL.rndCost?"disabled":""}>${S.rnd?"Aktiv":fmt(BAL.rndCost)}</button></div></div>
+    <button class="buy" onclick="doRnd()" title="Einmalig ${fmt(BAL.rndCost)}. Alle Wärmepumpen-Raten dauerhaft +${Math.round(BAL.rndBoost*100)} %." ${S.rnd||S.money<BAL.rndCost?"disabled":""}>${S.rnd?"Aktiv":fmt(BAL.rndCost)}</button></div></div>
   <div class="card"><div class="row"><div>
     <h3>📣 Marketing-Kampagne</h3><p>Plakat: „Detlef vertraut uns.“ Ruf +8.</p></div>
-    <button class="buy" onclick="mkt()" ${S.money<20000?"disabled":""}>20.000 €</button></div></div>
+    <button class="buy" onclick="mkt()" title="Einmalig 20.000 €. Ruf +8." ${S.money<20000?"disabled":""}>20.000 €</button></div></div>
   <div class="card"><div class="row"><div>
     <h3>📦 Rahmenvertrag Einkauf</h3><p>Wärmepumpen in Palettenware: CAPEX −8 %. (${Math.round(S.buyDisc*100)} % aktiv, max. 24 %)</p></div>
-    <button class="buy" onclick="bulk()" ${S.money<50000||S.buyDisc>=.24?"disabled":""}>50.000 €</button></div></div>
+    <button class="buy" onclick="bulk()" title="Einmalig 50.000 €. CAPEX pro Abschluss −8 % (kumulativ bis 24 %)." ${S.money<50000||S.buyDisc>=.24?"disabled":""}>50.000 €</button></div></div>
   <div class="card"><div class="row"><div>
     <h3>🏦 Notkredit</h3><p>+${fmt(BAL.loanAmt)} sofort, dafür ${fmt(BAL.loanInt)}/Monat Zinsen für immer. Die Bank lächelt. Zu breit.</p></div>
-    <button class="buy" onclick="loan()" ${S.loans>=3?"disabled":""}>Abschließen</button></div></div>`;
+    <button class="buy" onclick="loan()" title="+${fmt(BAL.loanAmt)} sofort, dafür ${fmt(BAL.loanInt)}/Monat Zinsen dauerhaft. Max. 3 Kredite." ${S.loans>=3?"disabled":""}>Abschließen</button></div></div>`;
 }
 function renderNews(){
   if(!document.querySelector("#p-news.on"))return;
@@ -965,13 +1039,64 @@ _svg.addEventListener("touchend",e=>{
 });
 _svg.addEventListener("click",e=>{
   if(_tapHandled){_tapHandled=false;return;}
+  if(_dragged){_dragged=false;return;}
   const t=e.target.closest(".bld");
   if(t)openSheet(+t.dataset.id);
 });
 
 render();
 const mw=$("#mapwrap");
-mw.scrollLeft=(MW-mw.clientWidth)/2;
+
+/* ============ Zoom & desktop drag-to-pan ============ */
+const ZMIN=.6,ZMAX=3;
+const IS_DESKTOP=window.matchMedia("(hover:hover) and (pointer:fine)").matches;
+const Z0=window.matchMedia("(min-width:900px)").matches?1.5:1; // one default zoom, reused by reset
+let ZOOM=Z0;
+function applyZoom(cx,cy){
+  ZOOM=clamp(ZOOM,ZMIN,ZMAX);
+  // keep the content point under (cx,cy) — default: viewport centre — stable across the zoom
+  if(cx==null){cx=mw.clientWidth/2;cy=mw.clientHeight/2;}
+  const contentX=(mw.scrollLeft+cx)/_prevZoom,contentY=(mw.scrollTop+cy)/_prevZoom;
+  _svg.setAttribute("width",r1(MW*ZOOM));
+  _svg.setAttribute("height",r1(MH*ZOOM));
+  mw.scrollLeft=contentX*ZOOM-cx;
+  mw.scrollTop=contentY*ZOOM-cy;
+  _prevZoom=ZOOM;
+}
+let _prevZoom=ZOOM;
+function zoomBy(f,cx,cy){ZOOM=clamp(ZOOM*f,ZMIN,ZMAX);applyZoom(cx,cy);}
+$("#zoomIn").onclick=()=>zoomBy(1.25);
+$("#zoomOut").onclick=()=>zoomBy(1/1.25);
+$("#zoomReset").onclick=()=>{ZOOM=Z0;applyZoom();};
+
+/* initial sizing + centre */
+_svg.setAttribute("width",r1(MW*ZOOM));
+_svg.setAttribute("height",r1(MH*ZOOM));
+mw.scrollLeft=(MW*ZOOM-mw.clientWidth)/2;
+mw.scrollTop=(MH*ZOOM-mw.clientHeight)/2;
+
+let _dragged=false;
+if(IS_DESKTOP){
+  /* wheel = zoom toward cursor */
+  mw.addEventListener("wheel",e=>{
+    e.preventDefault();
+    const rect=mw.getBoundingClientRect();
+    zoomBy(e.deltaY<0?1.12:1/1.12,e.clientX-rect.left,e.clientY-rect.top);
+  },{passive:false});
+  /* left-drag = pan; movement >4px suppresses the building-open click */
+  let dragging=false,dsx=0,dsy=0,dsl=0,dst=0;
+  mw.addEventListener("mousedown",e=>{
+    if(e.button!==0)return;
+    dragging=true;_dragged=false;dsx=e.clientX;dsy=e.clientY;dsl=mw.scrollLeft;dst=mw.scrollTop;
+  });
+  window.addEventListener("mousemove",e=>{
+    if(!dragging)return;
+    const dx=e.clientX-dsx,dy=e.clientY-dsy;
+    if(dx*dx+dy*dy>16){_dragged=true;mw.classList.add("grabbing");}
+    if(_dragged){mw.scrollLeft=dsl-dx;mw.scrollTop=dst-dy;}
+  });
+  window.addEventListener("mouseup",()=>{dragging=false;mw.classList.remove("grabbing");});
+}
 </script>
 </body>
 </html>
