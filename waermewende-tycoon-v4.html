@@ -950,19 +950,21 @@ if(_seed!==null){
 $("#mapwrap").innerHTML=`<svg id="citysvg" width="${MW}" height="${MH}" viewBox="0 0 ${MW} ${MH}">
   <g id="ground">${buildGround()}</g><g id="dyn"></g></svg>`;
 
-/* Touch-safe building tap: track start position, fire on touchend if no significant drag */
-let _tsX=0,_tsY=0;
+/* Touch-safe building tap: track start position, fire on touchend if no significant drag.
+   _tapHandled flag suppresses only the synthetic click that follows a handled touch tap,
+   so mouse/trackpad clicks still work on hybrid devices (Windows convertibles, iPad+mouse). */
+let _tsX=0,_tsY=0,_tapHandled=false;
 const _svg=$("#citysvg");
-_svg.addEventListener("touchstart",e=>{_tsX=e.touches[0].clientX;_tsY=e.touches[0].clientY;},{passive:true});
+_svg.addEventListener("touchstart",e=>{_tsX=e.touches[0].clientX;_tsY=e.touches[0].clientY;_tapHandled=false;},{passive:true});
 _svg.addEventListener("touchend",e=>{
   const dx=e.changedTouches[0].clientX-_tsX,dy=e.changedTouches[0].clientY-_tsY;
   if(dx*dx+dy*dy<100){
     const t=e.target.closest(".bld");
-    if(t){e.preventDefault();openSheet(+t.dataset.id);}
+    if(t){e.preventDefault();_tapHandled=true;openSheet(+t.dataset.id);}
   }
 });
 _svg.addEventListener("click",e=>{
-  if("ontouchstart" in window)return;
+  if(_tapHandled){_tapHandled=false;return;}
   const t=e.target.closest(".bld");
   if(t)openSheet(+t.dataset.id);
 });
