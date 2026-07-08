@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Wärmewende Tycoon 🔥→🌱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#EAF4FB; --ink:#26323F;
+  --fire:#FF6B35; --leaf:#38B000; --bau:#3A86FF; --sun:#FFD166; --kessel:#E8A33D;
+  --card:#FFFFFF; --shadow:0 3px 0 rgba(38,50,63,.18);
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;}
+body{display:flex;flex-direction:column;height:100dvh;overflow:hidden;background:var(--sky);color:var(--ink);
+  font-family:'Nunito',sans-serif;font-variant-numeric:tabular-nums;overscroll-behavior:none;}
+h1,h2,h3{font-family:'Baloo 2',cursive;}
+button{font-family:'Baloo 2',cursive;border:none;cursor:pointer;}
+
+/* ---------- Compact top bar ---------- */
+header{background:var(--ink);color:#fff;padding:5px 10px;display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+header .title{font-family:'Baloo 2';font-weight:800;font-size:14px;line-height:1;flex:1;}
+.datechip{background:#3d4c5c;border-radius:9px;padding:3px 8px;font-weight:800;font-size:12px;}
+.speedbtn{background:#3d4c5c;color:#fff;border-radius:9px;width:32px;height:27px;font-size:13px;}
+.speedbtn.on{background:var(--sun);color:var(--ink);}
+.thermo{background:var(--ink);padding:0 10px 6px;flex:0 0 auto;}
+.thermo .bar{position:relative;height:16px;background:#3d4c5c;border-radius:9px;overflow:hidden;}
+.thermo .fill{height:100%;width:0%;border-radius:9px;
+  background:linear-gradient(90deg,#FF6B35,#FFD166,#38B000);transition:width .6s;}
+.thermo .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-family:'Baloo 2';font-weight:800;font-size:11px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);}
+.thermo .ends{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;padding:0 5px;font-size:11px;}
+
+/* ---------- Stat chips ---------- */
+.stats{display:flex;gap:5px;overflow-x:auto;padding:5px 8px;scrollbar-width:none;background:var(--sky);flex:0 0 auto;}
+.stats::-webkit-scrollbar{display:none;}
+.chip{flex:0 0 auto;background:var(--card);border-radius:10px;padding:3px 8px;box-shadow:var(--shadow);
+  font-size:11px;font-weight:800;white-space:nowrap;}
+.chip b{font-size:12px;}
+.chip.bad b{color:var(--fire);} .chip.good b{color:var(--leaf);}
+
+/* ---------- Main / panels ---------- */
+main{flex:1;min-height:0;padding:4px 6px 6px;}
+.panel{display:none;height:100%;} .panel.on{display:block;}
+#p-team,#p-news{overflow-y:auto;padding-bottom:6px;}
+
+/* ---------- Iso map ---------- */
+.mapwrap{background:#BFE3F2;border-radius:14px;box-shadow:var(--shadow);height:100%;
+  overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;}
+.mapwrap svg{display:block;}
+.bld{cursor:pointer;}
+.bld polygon{stroke:rgba(38,50,63,.35);stroke-width:1;stroke-linejoin:round;}
+.bld:active polygon{filter:brightness(1.08);}
+.puff{animation:puff 2.2s infinite;}
+@keyframes puff{0%,100%{opacity:.85}50%{opacity:.15}}
+.sprout{animation:sprout 2.6s infinite;}
+@keyframes sprout{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* ---------- Cards ---------- */
+.card{background:var(--card);border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:var(--shadow);}
+.card h3{margin:0 0 4px;font-size:16px;}
+.card p{margin:0 0 8px;font-size:13px;}
+.card.jv{border:3px solid var(--sun);}
+.card.jv ul{margin:6px 0 10px;padding-left:18px;font-size:13px;font-weight:700;}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+.buy{background:var(--sun);color:var(--ink);border-radius:12px;padding:8px 14px;font-weight:800;font-size:14px;box-shadow:var(--shadow);}
+.buy:disabled{opacity:.4;}
+.prio{display:flex;gap:6px;}
+.pbtn{flex:1;background:#EFEAE0;border-radius:12px;padding:8px 4px;font-weight:800;font-size:12px;line-height:1.2;color:var(--ink);}
+.pbtn small{display:block;font-family:'Nunito';font-weight:700;font-size:9.5px;opacity:.75;margin-top:3px;}
+.pbtn.on{background:var(--sun);box-shadow:var(--shadow);}
+table.pl{width:100%;border-collapse:collapse;font-size:13px;}
+table.pl td{padding:3px 0;} table.pl td:last-child{text-align:right;font-weight:800;}
+table.pl tr.sum td{border-top:2px solid var(--ink);font-weight:900;}
+
+/* ---------- News ---------- */
+.news{background:var(--card);border-radius:16px;padding:8px 12px;box-shadow:var(--shadow);}
+.news div{padding:7px 0;border-bottom:1px dashed #d8d2c6;font-size:13px;}
+.news div b{color:#7a7264;font-size:11px;margin-right:6px;}
+
+/* ---------- Bottom nav ---------- */
+nav{background:var(--ink);display:flex;padding:4px 8px calc(4px + env(safe-area-inset-bottom));gap:8px;flex:0 0 auto;}
+nav button{flex:1;background:transparent;color:#94A3B4;border-radius:11px;padding:4px 0 3px;
+  font-size:10px;font-weight:800;display:flex;flex-direction:column;align-items:center;position:relative;}
+nav button span{font-size:17px;}
+nav button.on{background:#3d4c5c;color:#fff;}
+nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-radius:50%;background:var(--sun);}
+
+/* ---------- Bottom sheet ---------- */
+.sheetwrap{position:fixed;inset:0;z-index:60;display:none;}
+.sheetwrap.on{display:block;}
+.dim{position:absolute;inset:0;background:rgba(20,28,36,.55);}
+.sheet{position:absolute;bottom:0;left:0;right:0;background:var(--card);border-radius:22px 22px 0 0;
+  padding:14px 16px calc(16px + env(safe-area-inset-bottom));max-height:82vh;overflow-y:auto;
+  animation:up .22s ease-out;}
+@keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.sheet .grab{width:44px;height:5px;background:#d8d2c6;border-radius:3px;margin:0 auto 10px;}
+.sheet h2{margin:0;font-size:19px;display:flex;gap:8px;align-items:center;}
+.sheet .sub{font-size:12px;font-weight:800;color:#8a8172;margin:2px 0 8px;}
+.sheet .quote{background:#FBF4E4;border-radius:12px;padding:8px 11px;font-size:13px;font-style:italic;margin-bottom:10px;}
+.facts{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px;}
+.facts td{padding:4px 0;border-bottom:1px dashed #eee4d2;}
+.facts td:last-child{text-align:right;font-weight:800;}
+.bigbtn{width:100%;background:var(--leaf);color:#fff;border-radius:14px;padding:12px;font-size:16px;
+  font-weight:800;box-shadow:0 4px 0 #2a8500;margin-bottom:8px;}
+.bigbtn:active{transform:translateY(2px);box-shadow:0 2px 0 #2a8500;}
+.bigbtn:disabled{background:#b9c4b0;box-shadow:none;}
+.bigbtn.poach{background:var(--fire);box-shadow:0 4px 0 #c94f22;}
+.bigbtn.kessel{background:var(--kessel);box-shadow:0 4px 0 #b87e22;}
+.bigbtn.upg{background:var(--bau);box-shadow:0 4px 0 #2a63c4;}
+.chance{text-align:center;font-weight:900;font-size:13px;margin:2px 0 0;color:#6b7a5a;}
+
+/* ---------- Toasts ---------- */
+.toasts{position:fixed;top:84px;left:10px;right:10px;z-index:70;display:flex;flex-direction:column;gap:6px;pointer-events:none;}
+.toast{background:var(--ink);color:#fff;border-radius:14px;padding:9px 13px;font-size:13px;font-weight:800;
+  box-shadow:0 6px 14px rgba(0,0,0,.3);animation:tin .25s ease-out;}
+.toast.win{background:var(--leaf);} .toast.bad{background:var(--fire);} .toast.event{background:#6C4AB6;}
+@keyframes tin{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+
+/* ---------- Overlays ---------- */
+.overlay{position:fixed;inset:0;z-index:80;background:rgba(20,28,36,.7);display:flex;
+  align-items:center;justify-content:center;padding:18px;}
+.obox{background:var(--card);border-radius:22px;padding:20px 18px;max-width:420px;width:100%;
+  text-align:center;box-shadow:0 10px 0 rgba(0,0,0,.25);max-height:90vh;overflow-y:auto;}
+.obox h1{margin:0 0 2px;font-size:25px;line-height:1.1;}
+.obox .tag{font-weight:800;color:#8a8172;font-size:13px;margin-bottom:12px;}
+.obox ul{text-align:left;font-size:13.5px;font-weight:700;padding-left:20px;margin:0 0 14px;}
+.obox li{margin-bottom:6px;}
+.obox .bigbtn{font-size:18px;}
+.endstats{display:flex;gap:8px;justify-content:center;margin:14px 0;flex-wrap:wrap;}
+.endstats div{background:#FBF4E4;border-radius:12px;padding:8px 12px;font-size:12px;font-weight:800;}
+.endstats b{display:block;font-size:17px;}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">WÄRMEWENDE TYCOON</div>
+  <div class="datechip" id="date">Jan 26</div>
+  <button class="speedbtn" id="btnPause">⏸</button>
+  <button class="speedbtn" id="btnFast">⏩</button>
+</header>
+<div class="thermo">
+  <div class="bar">
+    <div class="fill" id="shareFill"></div>
+    <div class="ends"><span>🔥</span><span>🌱</span></div>
+    <div class="lbl" id="shareLbl">Dekarbonisiert 0 %</div>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<main>
+  <section class="panel on" id="p-map">
+    <div class="mapwrap" id="mapwrap"></div>
+  </section>
+  <section class="panel" id="p-team"></section>
+  <section class="panel" id="p-news">
+    <div class="news" id="newsList"></div>
+  </section>
+</main>
+
+<nav>
+  <button class="on" data-p="map"><span>🗺️</span>Stadt</button>
+  <button data-p="team" id="navTeam"><span>👷</span>Firma</button>
+  <button data-p="news"><span>📰</span>News</button>
+</nav>
+
+<div class="sheetwrap" id="sheetwrap">
+  <div class="dim" onclick="closeSheet()"></div>
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<div class="overlay" id="intro">
+  <div class="obox">
+    <h1>🔥→🌱 WÄRMEWENDE TYCOON</h1>
+    <div class="tag">Kesselhausen an der Fern, 2026. Es riecht nach Heizöl und Chancen.</div>
+    <ul>
+      <li>🏢 <b>Tippe auf ein Gebäude:</b> Wärmepumpen-Contracting (teuer, volle Rate) oder günstiger <b>Kesseltausch</b> – sichert dir den Kunden, dekarbonisiert aber nicht. Später upgraden!</li>
+      <li>👷 <b>Bau deine Firma aus:</b> Monteure (Umbau-Tempo), Vertriebler (Abschlussquote), Prioritäten, F&E, Einkauf.</li>
+      <li>😏 <b>Konkurrenz schnappt sich freie Gebäude.</b> Abwerben geht – deine Kunden sind dagegen sicher.</li>
+      <li>🤝 <b>Ab 25 % Kundenanteil: Joint Ventures.</b> Ganze Gebäudepakete auf einen Schlag – der Partner kassiert mit.</li>
+      <li>🏆 <b>Ziel: 100 % dekarbonisiert</b> (Thermometer oben). Pleite = Insolvenz in Eigenverwaltung (klingt besser, ist es nicht).</li>
+    </ul>
+    <button class="bigbtn" onclick="startGame()">Kessel raus, los geht's! 🚀</button>
+  </div>
+</div>
+
+<div class="overlay" id="end" style="display:none">
+  <div class="obox" id="endBox"></div>
+</div>
+
+<script>
+"use strict";
+/* ============ Helpers ============ */
+const $=s=>document.querySelector(s);
+const fmt=n=>Math.round(n).toLocaleString("de-DE")+" €";
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const r1=n=>Math.round(n*10)/10;
+const MON=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
+function shade(hex,f){const n=parseInt(hex.slice(1),16);
+  const r=clamp(Math.round(((n>>16)&255)*f),0,255),g=clamp(Math.round(((n>>8)&255)*f),0,255),
+        b=clamp(Math.round((n&255)*f),0,255);return `rgb(${r},${g},${b})`;}
+
+/* ============ Content ============ */
+const COMPS=[
+  {id:"tk",name:"ThermoKlaus GmbH",emoji:"🔧",color:"#C0392B",agg:.55},
+  {id:"vf",name:"Vattenfail AG",emoji:"🏢",color:"#8E44AD",agg:.7},
+  {id:"ws",name:"Wärme & Söhne KG",emoji:"👴",color:"#D35400",agg:.4},
+];
+const STREETS=["Gaskesselweg","Ölwechselallee","Am Heizkeller","Brennwertbogen","Vorlaufstraße",
+  "Rücklaufweg","Thermostatgasse","Pufferspeicherplatz","Heizkurvenpfad","Zirkulationsring",
+  "Kondensatweg","Fernwärmering"];
+const TYPES={
+  mfh:{e:"🏢",l:"Mehrfamilienhaus",fl:[3,5]},
+  platte:{e:"🏨",l:"Plattenbau",fl:[6,9]},
+  block:{e:"🏬",l:"Wohnblock",fl:[4,6]},
+  altbau:{e:"🏚️",l:"Unsanierter Altbau",fl:[3,4]},
+  reihe:{e:"🏘️",l:"Reihenhaus-Zeile",fl:[2,2]},
+  villa:{e:"🏛️",l:"Gründerzeit-Villa",fl:[2,3]},
+};
+const HEIZ=["Gaskessel Bj. 1998","Ölkessel mit Charakter","Nachtspeicher (autsch)",
+  "34 Gasetagenheizungen, alle einzeln","Konstanttemperaturkessel, läuft konstant schlecht",
+  "Kessel, Baujahr unbekannt, Geräusch bekannt"];
+const DESCS=[
+  "Die WEG streitet seit 2019 über die Fassadenfarbe. Über Heizung reden sie mit dir.",
+  "Hausmeister Detlef kennt jeden Heizkörper beim Vornamen.",
+  "Der Eigentümer sagt: „Läuft doch noch.“ Der Kessel sagt: „Hilfe.“",
+  "Energieausweis Klasse H. H wie Hoffnungslos? Nein – wie Handlungsbedarf!",
+  "Die Mieter googeln nachts: „Wärmepumpe leise?“",
+  "Im Keller riecht es nach 1987. Der Kessel ist von 1987.",
+  "Die Hausverwaltung antwortet in 6–8 Wochen. Der Kessel kündigt früher.",
+  "PV auf dem Dach – seit 2014 nicht angeschlossen. Ambitioniert.",
+  "Beim Ortstermin bietet Frau Krause Streuselkuchen an. Nimm den Auftrag. Und den Kuchen.",
+  "Der Beirat besteht aus drei Ingenieuren i. R. Bring Diagramme mit.",
+];
+const WINLINES=[
+  "Zuschlag! Frau Krause bringt Streuselkuchen zur Vertragsunterschrift. 🍰",
+  "Deal! Detlef nickt anerkennend. Das gab es zuletzt 2009.",
+  "Unterschrieben! Die WEG war sich zum ersten Mal einig.",
+  "Auftrag gewonnen! Der alte Kessel hat es kommen sehen.",
+];
+const FAILLINES=[
+  "Die WEG vertagt sich auf 2031. 📅",
+  "„Wir wollen erst mal Wasserstoff abwarten.“ Ach je.",
+  "Der Beirat hat noch Fragen. 74 Stück. Schriftlich.",
+  "Absage. Der Schwager vom Eigentümer „kennt sich da aus“.",
+];
+const POACHWIN=[
+  "Abgeworben! Die Konkurrenz schreibt eine böse Mail. 😏",
+  "Wechsel perfekt! Der alte Anbieter hatte eh nie zurückgerufen.",
+];
+const JVPARTNERS=[
+  "Wohnungsbaugesellschaft Kesselhausen mbH",
+  "HausInvest „Beton & Söhne“",
+  "KWK Kommunales Wohnen eG",
+  "Familienstiftung von Heizberg",
+];
+const EVENTS=[
+  {w:2,f:()=>{S.effects.push({k:"sub",d:-.30,m:3});
+    return "🥶 HAUSHALTSSPERRE! Förderung eingefroren. Berlin sagt: „Kommen Sie in 3 Monaten wieder.“";}},
+  {w:2,f:()=>{S.effects.push({k:"sub",d:+.15,m:4});
+    return "🎉 Neue Förderrunde! Zuschuss rauf. Schnell, bevor der Topf leer ist!";}},
+  {w:2,f:()=>{S.energy=clamp(S.energy*1.25,.7,1.9);
+    return "📈 Gaspreis explodiert! Plötzlich wollen ALLE eine Wärmepumpe. Dein Telefon glüht.";}},
+  {w:2,f:()=>{S.energy=clamp(S.energy*.85,.7,1.9);
+    return "🌤️ Milder Winter. Energiepreise sinken, deine Raten auch. Der Kessel lacht leise.";}},
+  {w:1,f:()=>{if(S.installers<2)return null;S.installers--;
+    return "🚐 Monteur Jürgen kündigt und macht jetzt Van-Life. −1 Monteur.";}},
+  {w:1,f:()=>{S.installers++;
+    return "💪 Handwerksmesse: Monteurin Aylin heuert an! +1 Monteur (sie ist schneller als Jürgen je war).";}},
+  {w:2,f:()=>{S.freeze=2;
+    return "🚢 Wärmepumpen-Lieferstau im Hafen. Umbauten pausieren 2 Monate. Der Container winkt aus der Ferne.";}},
+  {w:2,f:()=>{S.rep=clamp(S.rep+6,0,100);
+    return "📰 Lokalzeitung titelt: „Die machen das mit der Wärme!“ Ruf +6.";}},
+  {w:1,f:()=>{S.rep=clamp(S.rep-6,0,100);
+    return "📢 Bürgerinitiative „Rettet den Heizkeller e. V.“ demonstriert vor deinem Büro. Ruf −6.";}},
+  {w:2,f:()=>{S.rep=clamp(S.rep+5,0,100);
+    return "🙃 ThermoKlaus montiert eine Wärmepumpe über Kopf. Ihr wirkt plötzlich extrem seriös. Ruf +5.";}},
+  {w:1,f:()=>{S.money-=10000;
+    return "☕ Betriebsprüfung. Der Prüfer nimmt den Kaffee schwarz. −10.000 €.";}},
+  {w:2,f:()=>{S.effects.push({k:"acq",d:.12,m:3});
+    return "🗺️ Kommunale Wärmeplanung veröffentlicht! Eigentümer in heller Aufregung. Akquise 3 Monate leichter.";}},
+];
+
+/* ============ Balance ============ */
+const BAL={
+  startMoney:500000, capexWE:2600, rateWE:140, kesselWE:600, kesselRateWE:45,
+  pitchBase:500, pitchWE:40, salary:5000, salarySeller:4000, convWE:10,
+  loanAmt:250000, loanInt:6000, poachFeeWE:120, upgFactor:.85,
+  compStart:6, compProb:.10, eventProb:.25, brokeAt:-150000,
+  tickMs:7500, tickFastMs:2500, jvShare:.25, jvDiscount:.15, jvCut:.20, jvRefresh:6,
+  sellerChance:.04, maxSellers:4, rndCost:120000, rndBoost:.12,
+};
+const PRIOS={
+  vertrieb:{e:"📞",l:"Vertrieb",chance:+.10,conv:.75,d:"+10 % Abschluss<br>−25 % Umbau"},
+  mix:{e:"⚖️",l:"Ausgewogen",chance:0,conv:1,d:"solide<br>unaufgeregt"},
+  montage:{e:"🔧",l:"Montage",chance:-.15,conv:1.25,d:"+25 % Umbau<br>−15 % Abschluss"},
+};
+
+/* ============ State ============ */
+const S={
+  money:BAL.startMoney, month:0, rep:50, co2:0, energy:1.0,
+  installers:2, sellers:0, loans:0, buyDisc:0, freeze:0, prio:"mix", rnd:false,
+  effects:[], news:[], speed:1, paused:true, over:false,
+  buildings:[], deco:[], jv:null, jvUnlocked:false,
+  lastPL:{inc:0,sal:0,int:0},
+};
+const subBase=.30;
+const effSub=()=>clamp(subBase+S.effects.filter(e=>e.k==="sub").reduce((a,e)=>a+e.d,0),0,.55);
+const acqBonus=()=>S.effects.filter(e=>e.k==="acq").reduce((a,e)=>a+e.d,0);
+const capexOf=b=>b.units*BAL.capexWE*(1-effSub())*(1-S.buyDisc);
+const kesselCost=b=>b.units*BAL.kesselWE;
+const pitchOf=b=>BAL.pitchBase+b.units*BAL.pitchWE;
+const poachFeeOf=b=>b.units*BAL.poachFeeWE;
+const rateOf=b=>b.units*BAL.rateWE*S.energy*(b.jv?1-BAL.jvCut:1)*(S.rnd?1+BAL.rndBoost:1);
+const kRate=b=>b.units*BAL.kesselRateWE*S.energy*(b.jv?1-BAL.jvCut:1);
+const chanceOf=(b,poach)=>clamp(.5+S.rep*.004+(S.energy>1.15?.08:0)+acqBonus()
+  +S.sellers*BAL.sellerChance+PRIOS[S.prio].chance-(poach?.22:0),.12,.95);
+
+/* ============ Iso city ============ */
+const TW=52,TH=26,FLPX=9;
+let CW,CH,OX,OY,MW,MH;
+const iso=(x,y)=>({X:(x-y)*TW/2+OX,Y:(x+y)*TH/2+OY});
+const PATTERNS=[
+  [{x:0,y:0,w:2,d:2,t:"mfh"}],
+  [{x:0,y:0,w:3,d:2,t:"platte"}],
+  [{x:0,y:0,w:2,d:3,t:"block"}],
+  [{x:0,y:0,w:1,d:3,t:"reihe"},{x:2,y:0,w:1,d:3,t:"reihe"}],
+  [{x:0,y:0,w:2,d:2,t:"altbau"},{x:2,y:2,w:1,d:1,t:"villa"}],
+  [{x:0,y:0,w:1,d:1,t:"villa"},{x:2,y:0,w:1,d:1,t:"villa"},{x:1,y:2,w:1,d:1,t:"villa"}],
+  [{x:0,y:0,w:3,d:1,t:"altbau"},{x:0,y:2,w:3,d:1,t:"reihe"}],
+  [{x:0,y:0,w:2,d:2,t:"mfh"}],
+  [{x:1,y:0,w:2,d:3,t:"block"}],
+];
+function calcWindows(b){
+  const Bp=iso(b.gx+b.w,b.gy),D=iso(b.gx,b.gy+b.d);
+  let dark="",lit="";
+  const face=(P0,vx,vy,n)=>{
+    for(let j=0;j<n;j++)for(const off of[.16,.56]){
+      for(let f=0;f<b.floors;f++){
+        const f0=j+off,f1=f0+.28,z=f*FLPX+2.4,wh=4.4;
+        const x0=P0.X+vx*f0,y0=P0.Y+vy*f0-z,x1=P0.X+vx*f1,y1=P0.Y+vy*f1-z;
+        const seg=`M${r1(x0)},${r1(y0)}L${r1(x1)},${r1(y1)}L${r1(x1)},${r1(y1-wh)}L${r1(x0)},${r1(y0-wh)}Z`;
+        if(Math.random()<.22)lit+=seg;else dark+=seg;
+      }
+    }
+  };
+  face(Bp,-TW/2,TH/2,b.d);
+  face(D,TW/2,TH/2,b.w);
+  const dc=b.w/2;
+  const dx0=D.X+TW/2*(dc-.13),dy0=D.Y+TH/2*(dc-.13);
+  const dx1=D.X+TW/2*(dc+.13),dy1=D.Y+TH/2*(dc+.13);
+  dark+=`M${r1(dx0)},${r1(dy0)}L${r1(dx1)},${r1(dy1)}L${r1(dx1)},${r1(dy1-7)}L${r1(dx0)},${r1(dy0-7)}Z`;
+  b.winD=dark;b.winL=lit;
+}
+function genCity(){
+  const BW=4,BH=5,P=4;
+  CW=BW*P+1;CH=BH*P+1;
+  OX=CH*TW/2;OY=95;
+  MW=(CW+CH)*TW/2;MH=(CW+CH)*TH/2+OY+14;
+  const used={};let id=0;
+  const parkBlocks=new Set([6,13]);
+  for(let by=0;by<BH;by++)for(let bx=0;bx<BW;bx++){
+    const bi=by*BW+bx,ox=bx*P+1,oy=by*P+1;
+    const covered=new Set();
+    if(!parkBlocks.has(bi)){
+      const pat=pick(PATTERNS);
+      for(const pb of pat){
+        const t=TYPES[pb.t],floors=ri(t.fl[0],t.fl[1]);
+        const st=pick(STREETS);used[st]=(used[st]||0)+ri(1,7);
+        const b={
+          id:id++,gx:ox+pb.x,gy:oy+pb.y,w:pb.w,d:pb.d,floors,t:pb.t,
+          name:st+" "+used[st],units:Math.max(4,Math.round(pb.w*pb.d*floors*1.4*rnd(.9,1.15))),
+          heiz:pick(HEIZ),desc:pick(DESCS),
+          owner:null,comp:null,status:"frei",done:0,jv:false,hadKessel:false,
+        };
+        calcWindows(b);
+        b.fc=pick(FACADES);
+        b.roofKind=b.t==="platte"?"tower":b.t==="block"?"pent":b.t==="mfh"?(Math.random()<.5?"pitch":"pent"):"pitch";
+        b.rh=Math.min(b.w,b.d)>=2?10:7;
+        buildBody(b);
+        S.buildings.push(b);
+        for(let dx=0;dx<pb.w;dx++)for(let dy=0;dy<pb.d;dy++)covered.add((pb.x+dx)+","+(pb.y+dy));
+      }
+    }
+    for(let cx=0;cx<3;cx++)for(let cy=0;cy<3;cy++){
+      if(covered.has(cx+","+cy))continue;
+      if(parkBlocks.has(bi)){
+        if(cx===1&&cy===1)S.deco.push({gx:ox+cx,gy:oy+cy,e:"⛲",fs:17});
+        else S.deco.push({gx:ox+cx,gy:oy+cy,e:pick(["🌳","🌲","🌳"]),fs:16});
+      }else if(Math.random()<.45){
+        S.deco.push({gx:ox+cx,gy:oy+cy,e:pick(["🌳","🌲"]),fs:15});
+      }
+    }
+  }
+  for(let i=0;i<6;i++){
+    const horiz=Math.random()<.5;
+    const gx=horiz?ri(1,CW-2):ri(0,BW)*P;
+    const gy=horiz?ri(0,BH)*P:ri(1,CH-2);
+    S.deco.push({gx,gy,e:pick(["🚗","🚕","🚚","🚌"]),fs:12});
+  }
+}
+function buildGround(){
+  let s="";
+  for(let y=0;y<CH;y++)for(let x=0;x<CW;x++){
+    const road=(x%4===0||y%4===0);
+    const A=iso(x,y),B=iso(x+1,y),C=iso(x+1,y+1),D=iso(x,y+1);
+    const fill=road?"#6B7280":((x+y)%2?"#A9D18E":"#9CCB86");
+    s+=`<polygon points="${A.X},${A.Y} ${B.X},${B.Y} ${C.X},${C.Y} ${D.X},${D.Y}" fill="${fill}" stroke="${road?"#5d6673":"rgba(0,0,0,.04)"}" stroke-width="1"/>`;
+  }
+  return s;
+}
+const FACADES=["#E9DCC0","#E5C88F","#E3B7A6","#CFD9BB","#C9D4DC","#F0E6D2","#DFC9A8"];
+const TILE="#C4634E";
+function statusColor(b){
+  if(b.status==="aktiv")return "#4CAF50";
+  if(b.status==="umbau")return "#4A90E2";
+  if(b.status==="kessel")return "#E8A33D";
+  if(b.status==="komp")return b.comp.color;
+  return "#8E8779";
+}
+function prism(x,y,w,d,lift,h,ct,cl,cr){
+  const A=iso(x,y),B=iso(x+w,y),C=iso(x+w,y+d),D=iso(x,y+d);
+  const p=(q,z)=>`${r1(q.X)},${r1(q.Y-z)}`;
+  return `<polygon points="${p(B,lift)} ${p(C,lift)} ${p(C,lift+h)} ${p(B,lift+h)}" fill="${cr}"/>`+
+         `<polygon points="${p(C,lift)} ${p(D,lift)} ${p(D,lift+h)} ${p(C,lift+h)}" fill="${cl}"/>`+
+         `<polygon points="${p(A,lift+h)} ${p(B,lift+h)} ${p(C,lift+h)} ${p(D,lift+h)}" fill="${ct}"/>`;
+}
+const lerp=(a,b,t)=>({X:a.X+(b.X-a.X)*t,Y:a.Y+(b.Y-a.Y)*t});
+const lp=(P0,f,z)=>({X:P0.X+TW/2*f,Y:P0.Y+TH/2*f-z});
+function tileLines(E1,E2,R1,R2){
+  let s="";
+  for(const t of[.35,.7]){
+    const a=lerp(E1,R1,t),c=lerp(E2,R2,t);
+    s+=`<line x1="${r1(a.X)}" y1="${r1(a.Y)}" x2="${r1(c.X)}" y2="${r1(c.Y)}" stroke="rgba(0,0,0,.14)" stroke-width="1"/>`;
+  }
+  s+=`<line x1="${r1(R1.X)}" y1="${r1(R1.Y)}" x2="${r1(R2.X)}" y2="${r1(R2.Y)}" stroke="rgba(0,0,0,.28)" stroke-width="1.4"/>`;
+  return s;
+}
+function chimRow(b,h,rh){
+  const n=b.t==="reihe"?3:1;let s="";
+  for(let i=1;i<=n;i++){
+    const t=n===1?.72:i/(n+1);
+    const x=b.w>=b.d?b.gx+b.w*t-.09:b.gx+b.w/2-.09;
+    const y=b.w>=b.d?b.gy+b.d/2-.09:b.gy+b.d*t-.09;
+    s+=prism(x,y,.18,.18,h+rh-4,6,"#8a8070","#9c917e","#746a5c");
+  }
+  return s;
+}
+function buildBody(b){
+  const h=b.floors*FLPX,fc=b.fc;
+  const A=iso(b.gx,b.gy),B=iso(b.gx+b.w,b.gy),C=iso(b.gx+b.w,b.gy+b.d),D=iso(b.gx,b.gy+b.d);
+  const A2={X:A.X,Y:A.Y-h},B2={X:B.X,Y:B.Y-h},C2={X:C.X,Y:C.Y-h},D2={X:D.X,Y:D.Y-h};
+  const P=p=>p.map(q=>r1(q.X)+","+r1(q.Y)).join(" ");
+  const up=(p,z)=>({X:p.X,Y:p.Y-z});
+  let s="";
+  s+=`<polygon points="${P([B,C,C2,B2])}" fill="${shade(fc,.8)}"/>`;
+  s+=`<polygon points="${P([C,D,D2,C2])}" fill="${fc}"/>`;
+  s+=`<polygon points="${P([B,C,up(C,4.5),up(B,4.5)])}" fill="${shade(fc,.6)}" opacity=".9"/>`;
+  s+=`<polygon points="${P([C,D,up(D,4.5),up(C,4.5)])}" fill="${shade(fc,.66)}" opacity=".9"/>`;
+  s+=`<path d="${b.winD}" fill="#3E4A5A" opacity=".85"/><path d="${b.winL}" fill="#FFE28A"/>`;
+  if((b.t==="platte"||b.t==="block"||b.t==="mfh")&&b.w>=2){
+    let bal="",rail="";
+    for(let f=1;f<b.floors;f++)for(let j=0;j<b.w;j++){
+      if((f+j)%2)continue;
+      const z=f*FLPX+1.6;
+      const p0=lp(D,j+.24,z),p1=lp(D,j+.76,z);
+      const o={X:-TW/2*.16,Y:TH/2*.16};
+      const q0={X:p0.X+o.X,Y:p0.Y+o.Y},q1={X:p1.X+o.X,Y:p1.Y+o.Y};
+      bal+=`M${r1(p0.X)},${r1(p0.Y)}L${r1(p1.X)},${r1(p1.Y)}L${r1(q1.X)},${r1(q1.Y)}L${r1(q0.X)},${r1(q0.Y)}Z`;
+      rail+=`M${r1(q0.X)},${r1(q0.Y)}L${r1(q0.X)},${r1(q0.Y-3.5)}L${r1(q1.X)},${r1(q1.Y-3.5)}L${r1(q1.X)},${r1(q1.Y)}`;
+    }
+    s+=`<path d="${bal}" fill="${shade(fc,.55)}"/>`;
+    s+=`<path d="${rail}" fill="none" stroke="rgba(38,50,63,.55)" stroke-width=".9"/>`;
+  }
+  s+=`<path d="M${r1(B2.X)},${r1(B2.Y+.6)}L${r1(C2.X)},${r1(C2.Y+.6)}L${r1(D2.X)},${r1(D2.Y+.6)}" fill="none" stroke="${shade(fc,.55)}" stroke-width="1.4"/>`;
+  let extra=0;
+  if(b.roofKind==="pitch"){
+    const rh=b.rh;extra=rh;
+    if(b.w>=b.d){
+      const R1={X:iso(b.gx,b.gy+b.d/2).X,Y:iso(b.gx,b.gy+b.d/2).Y-h-rh};
+      const R2={X:iso(b.gx+b.w,b.gy+b.d/2).X,Y:iso(b.gx+b.w,b.gy+b.d/2).Y-h-rh};
+      s+=`<polygon points="${P([B2,C2,R2])}" fill="${shade(fc,.78)}"/>`;
+      s+=`<polygon points="${P([D2,C2,R2,R1])}" fill="${TILE}"/>`;
+      s+=tileLines(D2,C2,R1,R2);
+    }else{
+      const R1={X:iso(b.gx+b.w/2,b.gy).X,Y:iso(b.gx+b.w/2,b.gy).Y-h-rh};
+      const R2={X:iso(b.gx+b.w/2,b.gy+b.d).X,Y:iso(b.gx+b.w/2,b.gy+b.d).Y-h-rh};
+      s+=`<polygon points="${P([D2,C2,R2])}" fill="${shade(fc,.9)}"/>`;
+      s+=`<polygon points="${P([B2,C2,R2,R1])}" fill="${shade(TILE,.85)}"/>`;
+      s+=tileLines(B2,C2,R1,R2);
+    }
+    s+=chimRow(b,h,rh);
+  }else{
+    s+=`<polygon points="${P([A2,B2,C2,D2])}" fill="#A8AEB5" stroke="rgba(38,50,63,.3)"/>`;
+    if(b.roofKind==="pent"){
+      extra=FLPX;
+      s+=prism(b.gx+.24,b.gy+.24,b.w-.48,b.d-.48,h,FLPX,"#949BA3",shade(fc,.96),shade(fc,.78));
+    }else if(b.roofKind==="tower"){
+      extra=12;
+      s+=prism(b.gx+b.w-.68,b.gy+.08,.6,b.d-.16,0,h+12,"#8F969E",shade(fc,.9),shade(fc,.7));
+    }else{
+      s+=prism(b.gx+.2,b.gy+.2,.22,.22,h,7,"#8a8070","#9c917e","#746a5c");
+    }
+  }
+  b.topH=h+extra;
+  b.body=s;
+}
+function scaffold(b,h){
+  let d="";
+  const face=(P0,vx,vy,n)=>{
+    for(let f=0;f<=n;f+=.5){
+      const x=P0.X+vx*f,y=P0.Y+vy*f;
+      d+=`M${r1(x)},${r1(y)}L${r1(x)},${r1(y-h)}`;
+    }
+    for(const z of[h*.35,h*.7]){
+      d+=`M${r1(P0.X)},${r1(P0.Y-z)}L${r1(P0.X+vx*n)},${r1(P0.Y+vy*n-z)}`;
+    }
+  };
+  face(iso(b.gx+b.w,b.gy),-TW/2,TH/2,b.d);
+  face(iso(b.gx,b.gy+b.d),TW/2,TH/2,b.w);
+  return `<path d="${d}" fill="none" stroke="#B08D57" stroke-width="1" opacity=".85"/>`;
+}
+function drawBuilding(b){
+  const h=b.floors*FLPX,m=.18;
+  const pA=iso(b.gx-m,b.gy-m),pB=iso(b.gx+b.w+m,b.gy-m),pC=iso(b.gx+b.w+m,b.gy+b.d+m),pD=iso(b.gx-m,b.gy+b.d+m);
+  let s=`<g class="bld" data-id="${b.id}">`;
+  s+=`<polygon points="${pA.X},${pA.Y} ${pB.X},${pB.Y} ${pC.X},${pC.Y} ${pD.X},${pD.Y}" fill="${statusColor(b)}" opacity="${b.status==="frei"?.5:.95}" stroke="rgba(38,50,63,.4)"/>`;
+  s+=b.body;
+  if(b.status==="umbau")s+=scaffold(b,h);
+  if(b.status==="komp"){
+    const ax=iso(b.gx,b.gy).X,ay=iso(b.gx,b.gy).Y-h;
+    s+=`<line x1="${r1(ax)}" y1="${r1(ay)}" x2="${r1(ax)}" y2="${r1(ay-13)}" stroke="#4a4a4a" stroke-width="1.2"/>`+
+       `<polygon points="${r1(ax)},${r1(ay-13)} ${r1(ax+10)},${r1(ay-10)} ${r1(ax)},${r1(ay-7)}" fill="${b.comp.color}"/>`;
+  }
+  if(b.status==="aktiv"){
+    const ux=b.gx+b.w-.8,uy=b.gy+b.d+.05;
+    s+=prism(ux,uy,.55,.32,0,5.5,"#f4f7f9","#e9eef2","#cfd6dd");
+    const f1=iso(ux+.275,uy+.32);
+    s+=`<circle cx="${r1(f1.X)}" cy="${r1(f1.Y-2.7)}" r="2.2" fill="#fff" stroke="#7f8b96" stroke-width=".8"/>`+
+       `<circle cx="${r1(f1.X)}" cy="${r1(f1.Y-2.7)}" r=".6" fill="#7f8b96"/>`;
+  }
+  const C=iso(b.gx+b.w,b.gy+b.d),D=iso(b.gx,b.gy+b.d);
+  s+=`<text x="${r1((C.X+D.X)/2)}" y="${r1((C.Y+D.Y)/2-h*.5)}" text-anchor="middle" font-size="${b.w*b.d>1?12:9}">${TYPES[b.t].e}</text>`;
+  const cx=(iso(b.gx,b.gy).X+iso(b.gx+b.w,b.gy+b.d).X)/2;
+  const topY=iso(b.gx,b.gy).Y-b.topH;
+  const by2=topY-12;
+  if(b.status==="frei")s+=`<text class="puff" x="${cx}" y="${by2}" text-anchor="middle" font-size="13">💨</text>`;
+  else if(b.status==="kessel")s+=`<text x="${cx}" y="${by2}" text-anchor="middle" font-size="13">♨️</text>`;
+  else if(b.status==="komp")s+=`<text x="${cx}" y="${by2}" text-anchor="middle" font-size="13">${b.comp.emoji}</text>`;
+  else if(b.status==="aktiv")s+=`<text class="sprout" x="${cx}" y="${by2}" text-anchor="middle" font-size="13">🌱</text>`;
+  else if(b.status==="umbau")s+=`<text x="${cx}" y="${by2}" text-anchor="middle" font-size="13">🏗️</text>`;
+  if(b.status==="umbau"){
+    s+=`<rect x="${cx-17}" y="${topY-8}" width="34" height="6" rx="3" fill="rgba(38,50,63,.75)"/>`;
+    s+=`<rect x="${cx-15}" y="${topY-6.5}" width="${30*b.done/b.units}" height="3" rx="1.5" fill="#7FB8FF"/>`;
+  }else{
+    s+=`<rect x="${cx-13}" y="${topY-8}" width="26" height="9" rx="4.5" fill="rgba(38,50,63,.72)"/>`;
+    s+=`<text x="${cx}" y="${topY-1}" text-anchor="middle" font-size="7" font-weight="800" fill="#fff" font-family="Nunito">${b.units} WE</text>`;
+  }
+  return s+"</g>";
+}
+function renderMap(){
+  const items=[
+    ...S.buildings.map(b=>({k:(b.gx+b.w)+(b.gy+b.d),h:drawBuilding(b)})),
+    ...S.deco.map(d=>{
+      const p=iso(d.gx+.5,d.gy+.5);
+      return{k:d.gx+1+d.gy+1,h:`<text x="${p.X}" y="${p.Y+4}" text-anchor="middle" font-size="${d.fs}">${d.e}</text>`};
+    }),
+  ].sort((a,b)=>a.k-b.k);
+  $("#dyn").innerHTML=items.map(i=>i.h).join("");
+}
+
+/* ============ Derived ============ */
+const totalUnits=()=>S.buildings.reduce((a,b)=>a+b.units,0);
+const decarbShare=()=>S.buildings.filter(b=>b.status==="aktiv").reduce((a,b)=>a+b.units,0)/totalUnits();
+const custShare=()=>S.buildings.filter(b=>b.owner==="you").reduce((a,b)=>a+b.units,0)/totalUnits();
+
+/* ============ Render ============ */
+function render(){
+  $("#date").textContent=MON[S.month%12]+" "+(26+Math.floor(S.month/12));
+  const sh=Math.round(decarbShare()*100);
+  $("#shareFill").style.width=sh+"%";
+  $("#shareLbl").textContent="Dekarbonisiert "+sh+" %";
+  const queue=S.buildings.filter(b=>b.status==="umbau").reduce((a,b)=>a+(b.units-b.done),0);
+  $("#stats").innerHTML=
+    chip("💰",fmt(S.money),S.money<0?"bad":"")+
+    chip("🤝 Kunden",Math.round(custShare()*100)+" %","")+
+    chip("⭐ Ruf",S.rep,"")+
+    chip("🌱",Math.round(S.co2)+" t CO₂/a","good")+
+    chip("⚡","×"+S.energy.toFixed(2),S.energy>1.15?"good":"")+
+    chip("🏛️",Math.round(effSub()*100)+" %",effSub()<.1?"bad":"")+
+    chip("👷",S.installers,"")+
+    chip("💼",S.sellers,"")+
+    chip("🚧",queue+" WE","");
+  document.querySelector("#navTeam .pip")?.remove();
+  if(S.jv)$("#navTeam").insertAdjacentHTML("beforeend",'<div class="pip"></div>');
+  renderMap();renderTeam();renderNews();
+}
+const chip=(l,v,c)=>`<div class="chip ${c}">${l} <b>${v}</b></div>`;
+
+function jvCard(){
+  if(!S.jvUnlocked)return `<div class="card jv"><h3>🤝 Joint Venture</h3>
+    <p>🔒 Ab <b>25 % Kundenanteil</b> klopfen die großen Bestandshalter an. Ganze Gebäudepakete, ein Vertrag, keine WEG-Sitzungen.</p></div>`;
+  if(!S.jv)return `<div class="card jv"><h3>🤝 Joint Venture</h3>
+    <p>Gerade kein Paket am Markt. Die Portfoliomanager sind im Off-Site. 🏌️</p></div>`;
+  const bs=S.jv.ids.map(i=>S.buildings[i]);
+  const price=bs.reduce((a,b)=>a+capexOf(b),0)*(1-BAL.jvDiscount);
+  const units=bs.reduce((a,b)=>a+b.units,0);
+  return `<div class="card jv"><h3>🤝 Joint Venture</h3>
+    <p><b>${S.jv.partner}</b> bietet ein Paket an – Zuschlag garantiert, CAPEX −${Math.round(BAL.jvDiscount*100)} %, aber der Partner behält dauerhaft ${Math.round(BAL.jvCut*100)} % der Rate. Angebot verfällt in ${S.jv.months} Mon.</p>
+    <ul>${bs.map(b=>`<li>${TYPES[b.t].e} ${b.name} (${b.units} WE)</li>`).join("")}</ul>
+    <div class="row"><div style="font-weight:800;font-size:14px">${units} WE gesamt</div>
+    <button class="buy" onclick="acceptJV()" ${S.money<price?"disabled":""}>${fmt(price)}</button></div></div>`;
+}
+function renderTeam(){
+  const p=S.lastPL;
+  $("#p-team").innerHTML=`
+  <div class="card"><h3>📊 Monatsabschluss</h3>
+    <table class="pl">
+      <tr><td>Contracting-Raten</td><td>+${fmt(p.inc)}</td></tr>
+      <tr><td>Gehälter (${S.installers} 👷 + ${S.sellers} 💼)</td><td>−${fmt(p.sal)}</td></tr>
+      <tr><td>Kreditzinsen (${S.loans} Kredite)</td><td>−${fmt(p.int)}</td></tr>
+      <tr class="sum"><td>Cashflow</td><td>${p.inc-p.sal-p.int>=0?"+":"−"}${fmt(Math.abs(p.inc-p.sal-p.int))}</td></tr>
+    </table></div>
+  <div class="card"><h3>🎯 Prioritäten</h3><p>Worauf sich dein Team gerade konzentriert:</p>
+    <div class="prio">${Object.entries(PRIOS).map(([k,v])=>
+      `<button class="pbtn ${S.prio===k?"on":""}" onclick="setPrio('${k}')">${v.e} ${v.l}<small>${v.d}</small></button>`).join("")}
+    </div></div>
+  ${jvCard()}
+  <div class="card"><div class="row"><div>
+    <h3>👷 Monteur anheuern</h3><p>+${BAL.convWE} WE Umbau/Monat. 12.000 € plus ${fmt(BAL.salary)}/Monat Gehalt (und Kaffee).</p></div>
+    <button class="buy" onclick="hire()" ${S.money<12000?"disabled":""}>12.000 €</button></div></div>
+  <div class="card"><div class="row"><div>
+    <h3>💼 Vertriebler einstellen</h3><p>+4 % Abschlusschance. ${fmt(BAL.salarySeller)}/Monat. Bringt eigene Anekdoten mit. (${S.sellers}/${BAL.maxSellers})</p></div>
+    <button class="buy" onclick="hireSeller()" ${S.money<8000||S.sellers>=BAL.maxSellers?"disabled":""}>8.000 €</button></div></div>
+  <div class="card"><div class="row"><div>
+    <h3>🔬 F&E: „WärmeWumme 3000“</h3><p>Eigene Wärmepumpen-Baureihe: Rate dauerhaft +${Math.round(BAL.rndBoost*100)} %. ${S.rnd?"✅ Läuft. Sie brummt beruhigend.":"Einmalige Investition."}</p></div>
+    <button class="buy" onclick="doRnd()" ${S.rnd||S.money<BAL.rndCost?"disabled":""}>${S.rnd?"Aktiv":fmt(BAL.rndCost)}</button></div></div>
+  <div class="card"><div class="row"><div>
+    <h3>📣 Marketing-Kampagne</h3><p>Plakat: „Detlef vertraut uns.“ Ruf +8.</p></div>
+    <button class="buy" onclick="mkt()" ${S.money<20000?"disabled":""}>20.000 €</button></div></div>
+  <div class="card"><div class="row"><div>
+    <h3>📦 Rahmenvertrag Einkauf</h3><p>Wärmepumpen in Palettenware: CAPEX −8 %. (${Math.round(S.buyDisc*100)} % aktiv, max. 24 %)</p></div>
+    <button class="buy" onclick="bulk()" ${S.money<50000||S.buyDisc>=.24?"disabled":""}>50.000 €</button></div></div>
+  <div class="card"><div class="row"><div>
+    <h3>🏦 Notkredit</h3><p>+${fmt(BAL.loanAmt)} sofort, dafür ${fmt(BAL.loanInt)}/Monat Zinsen für immer. Die Bank lächelt. Zu breit.</p></div>
+    <button class="buy" onclick="loan()" ${S.loans>=3?"disabled":""}>Abschließen</button></div></div>`;
+}
+function renderNews(){
+  $("#newsList").innerHTML=S.news.length?
+    S.news.slice(0,40).map(n=>`<div><b>${n.d}</b>${n.t}</div>`).join(""):
+    "<div>Noch keine Nachrichten. Die Stadt schläft. Die Kessel rußen.</div>";
+}
+
+/* ============ Toast / News ============ */
+function toast(t,cls=""){
+  const el=document.createElement("div");
+  el.className="toast "+cls;el.textContent=t;
+  $("#toasts").appendChild(el);
+  setTimeout(()=>{el.style.opacity=0;el.style.transition="opacity .4s";},4200);
+  setTimeout(()=>el.remove(),4700);
+  if($("#toasts").children.length>3)$("#toasts").firstChild.remove();
+}
+const news=t=>S.news.unshift({d:MON[S.month%12]+" "+(26+Math.floor(S.month/12)),t});
+
+/* ============ Building sheet ============ */
+function openSheet(id){
+  const b=S.buildings[id];if(!b)return;
+  let body="";
+  const facts=`<table class="facts">
+    <tr><td>Wohneinheiten</td><td>${b.units} WE</td></tr>
+    <tr><td>Etagen</td><td>${b.floors}</td></tr>
+    <tr><td>Heizung</td><td>${b.status==="kessel"?"Neuer Effizienzkessel (deiner)":b.heiz}</td></tr>`;
+  if(b.status==="frei"||b.status==="komp"){
+    const poach=b.status==="komp";
+    const capex=capexOf(b),kcost=kesselCost(b),pitch=pitchOf(b),fee=poach?poachFeeOf(b):0;
+    body=facts+`
+      <tr><td>💚 Wärmepumpe: CAPEX (n. ${Math.round(effSub()*100)} % Förd.)</td><td>${fmt(capex)}</td></tr>
+      <tr><td>♨️ Kesseltausch (keine Förderung, logisch)</td><td>${fmt(kcost)}</td></tr>
+      <tr><td>Vertriebskosten</td><td>${fmt(pitch)}</td></tr>
+      ${poach?`<tr><td>Wechselprämie</td><td>${fmt(fee)}</td></tr>`:""}
+      <tr><td>Rate: Wärmepumpe / Kessel</td><td>~${fmt(rateOf(b))} / ${fmt(kRate(b))}</td></tr></table>
+      ${poach?`<p style="font-size:13px;margin:0 0 8px">Aktuell bei <b style="color:${b.comp.color}">${b.comp.emoji} ${b.comp.name}</b> – die machen „Contracting“, aber mit Gas. Frechheit.</p>`:""}
+      <button class="bigbtn ${poach?"poach":""}" ${S.money<capex+pitch+fee?"disabled":""}
+        onclick="attempt(${b.id},'${poach?"poach":"wp"}')">${S.money<capex+pitch+fee?"Zu wenig Geld 💸":(poach?"Abwerben + Wärmepumpe 😏":"Wärmepumpen-Contracting 🤝")}</button>
+      ${poach?"":`<button class="bigbtn kessel" ${S.money<kcost+pitch?"disabled":""}
+        onclick="attempt(${b.id},'kessel')">${S.money<kcost+pitch?"Zu wenig Geld 💸":"Nur Kesseltausch ♨️ (Sparvariante)"}</button>`}
+      <div class="chance">Abschlusschance: ~${Math.round(chanceOf(b,poach)*100)} %</div>`;
+  }else if(b.status==="kessel"){
+    const cost=capexOf(b)*BAL.upgFactor;
+    body=facts+`
+      <tr><td>Aktuelle Rate (Kessel)</td><td>~${fmt(kRate(b))}/Mon.</td></tr>
+      <tr><td>Rate nach Upgrade</td><td>~${fmt(rateOf(b))}/Mon.</td></tr>
+      <tr><td>Upgrade-CAPEX (Bestandskunde −15 %)</td><td>${fmt(cost)}</td></tr></table>
+      <p style="font-size:13px;margin:0 0 8px">♨️ Dein Kunde, dein Kessel – aber dekarbonisiert ist hier noch nichts. Zuschlag garantiert, keine Vertriebskosten. Der Kessel läuft weiter, bis die Wärmepumpe steht.</p>
+      <button class="bigbtn upg" ${S.money<cost?"disabled":""} onclick="attempt(${b.id},'upgrade')">
+        ${S.money<cost?"Zu wenig Geld 💸":"Upgrade auf Wärmepumpe 🔁"}</button>`;
+  }else if(b.status==="umbau"){
+    body=facts+`<tr><td>Umbau-Fortschritt</td><td>${b.done}/${b.units} WE</td></tr>
+      ${b.hadKessel?`<tr><td>Übergangsrate (Kessel läuft noch)</td><td>~${fmt(kRate(b))}/Mon.</td></tr>`:""}</table>
+      <p style="font-size:13px">🚧 Deine Monteure sind dran. Es klopft, es bohrt, Detlef schaut zu und nickt fachmännisch.</p>`;
+  }else if(b.status==="aktiv"){
+    body=facts+`<tr><td>Einnahmen</td><td>~${fmt(rateOf(b))}/Mon.</td></tr>
+      ${b.jv?`<tr><td>Joint Venture</td><td>Partner behält ${Math.round(BAL.jvCut*100)} %</td></tr>`:""}
+      <tr><td>CO₂-Einsparung</td><td>${Math.round(b.units*2.1)} t/a</td></tr></table>
+      <p style="font-size:13px">🌱 Läuft! Der Heizkeller ist jetzt so leise, dass man die Mieter streiten hört.</p>`;
+  }
+  $("#sheet").innerHTML=`<div class="grab"></div>
+    <h2>${TYPES[b.t].e} ${b.name}</h2>
+    <div class="sub">${TYPES[b.t].l}${b.jv?" · Joint Venture":""}${b.status==="kessel"?" · Kesseltausch-Kunde":""}</div>
+    <div class="quote">„${b.desc}“</div>${body}`;
+  $("#sheetwrap").classList.add("on");
+}
+window.closeSheet=()=>$("#sheetwrap").classList.remove("on");
+
+/* ============ Actions ============ */
+window.attempt=(id,mode)=>{
+  const b=S.buildings[id];
+  if(mode==="upgrade"){
+    const cost=capexOf(b)*BAL.upgFactor;
+    if(S.money<cost||b.status!=="kessel")return;
+    S.money-=cost;b.status="umbau";b.done=0;b.hadKessel=true;
+    toast("🔁 Upgrade läuft! Der Gaskessel zählt seine letzten Tage. Detlef ist gerührt.","win");
+    news(`Upgrade auf Wärmepumpe: ${b.name}.`);
+    closeSheet();render();return;
+  }
+  const poach=mode==="poach",kessel=mode==="kessel";
+  const capex=kessel?kesselCost(b):capexOf(b),pitch=pitchOf(b),fee=poach?poachFeeOf(b):0;
+  if(S.money<capex+pitch+fee)return;
+  S.money-=pitch;
+  if(Math.random()<chanceOf(b,poach)){
+    S.money-=capex+fee;
+    if(poach)news(`Du wirbst ${b.name} von ${b.comp.name} ab. 😏`);
+    b.owner="you";b.comp=null;
+    if(kessel){
+      b.status="kessel";S.co2+=b.units*.4;
+      toast("♨️ Kesseltausch! Nicht sexy, aber der Kunde ist deiner. Upgrade nicht vergessen.","win");
+      news(`Kesseltausch: ${b.name} (${b.units} WE) ist jetzt Kunde.`);
+    }else{
+      b.status="umbau";b.done=0;
+      toast(pick(poach?POACHWIN:WINLINES),"win");
+      news(`Auftrag gewonnen: ${b.name} (${b.units} WE).`);
+    }
+    S.rep=clamp(S.rep+1,0,100);
+  }else{
+    S.rep=clamp(S.rep-1,0,100);
+    toast(pick(FAILLINES),"bad");
+    news(`Absage in der ${b.name}. Vertriebskosten futsch.`);
+  }
+  closeSheet();render();
+};
+window.acceptJV=()=>{
+  if(!S.jv)return;
+  const bs=S.jv.ids.map(i=>S.buildings[i]).filter(b=>b.status==="frei");
+  const price=bs.reduce((a,b)=>a+capexOf(b),0)*(1-BAL.jvDiscount);
+  if(S.money<price||!bs.length)return;
+  S.money-=price;
+  bs.forEach(b=>{b.owner="you";b.status="umbau";b.done=0;b.jv=true;});
+  S.rep=clamp(S.rep+3,0,100);
+  toast(`🤝 Joint Venture mit ${S.jv.partner}! ${bs.length} Gebäude auf einen Schlag. Der Notar braucht Urlaub.`,"win");
+  news(`Joint Venture: ${bs.length} Gebäude (${bs.reduce((a,b)=>a+b.units,0)} WE) mit ${S.jv.partner}.`);
+  S.jv=null;render();
+};
+window.setPrio=k=>{S.prio=k;
+  toast(k==="vertrieb"?"📞 Alle ans Telefon! Die Monteure machen jetzt auch Kaltakquise. Widerwillig.":
+        k==="montage"?"🔧 Alle auf die Baustelle! Der Vertrieb trägt jetzt Werkzeugkoffer.":
+        "⚖️ Zurück zur gesunden Mitte. Detlef nickt.","event");render();};
+window.hire=()=>{S.money-=12000;S.installers++;toast("👷 Neuer Monteur an Bord. Er hat eigenes Werkzeug. Ein gutes Zeichen.","win");render();};
+window.hireSeller=()=>{S.money-=8000;S.sellers++;toast("💼 Neuer Vertriebler! Er sagt „Win-win“. Zweimal pro Satz.","win");render();};
+window.doRnd=()=>{S.money-=BAL.rndCost;S.rnd=true;toast("🔬 Die WärmeWumme 3000 ist da! Sie brummt beruhigend. Rate +12 %.","win");render();};
+window.mkt=()=>{S.money-=20000;S.rep=clamp(S.rep+8,0,100);toast("📣 Kampagne läuft. Detlef ist jetzt lokal berühmt.","win");render();};
+window.bulk=()=>{S.money-=50000;S.buyDisc=Math.min(.24,S.buyDisc+.08);toast("📦 Rahmenvertrag unterschrieben. Der Lieferant schickt Kalender.","win");render();};
+window.loan=()=>{S.money+=BAL.loanAmt;S.loans++;toast("🏦 Kredit da. Die Bank ruft jetzt öfter an. „Nur um zu plaudern.“","event");render();};
+
+/* ============ Simulation ============ */
+function competitorsAct(){
+  if(S.month<BAL.compStart)return;
+  const free=S.buildings.filter(b=>b.status==="frei");
+  if(!free.length)return;
+  COMPS.forEach(c=>{
+    if(Math.random()<c.agg*BAL.compProb&&free.length){
+      const b=free.splice(Math.floor(Math.random()*free.length),1)[0];
+      b.owner=c.id;b.comp=c;b.status="komp";
+      news(`${c.emoji} ${c.name} schnappt sich ${b.name}. Mit Gas-Contracting. GAS!`);
+      if(Math.random()<.5)toast(`${c.emoji} ${c.name} schnappt sich ${b.name}!`,"bad");
+    }
+  });
+}
+function convert(){
+  if(S.freeze>0){S.freeze--;return;}
+  let cap=Math.round(S.installers*BAL.convWE*PRIOS[S.prio].conv);
+  for(const b of S.buildings.filter(b=>b.status==="umbau")){
+    if(cap<=0)break;
+    const take=Math.min(cap,b.units-b.done);
+    b.done+=take;cap-=take;
+    if(b.done>=b.units){
+      b.status="aktiv";S.co2+=b.units*(b.hadKessel?1.7:2.1);S.rep=clamp(S.rep+2,0,100);
+      toast(`🌱 ${b.name} fertig! Der alte Kessel geht in Rente.`,"win");
+      news(`Inbetriebnahme: ${b.name}. Wärmepumpe läuft.`);
+    }
+  }
+}
+function doEvent(){
+  if(Math.random()>BAL.eventProb)return;
+  for(let i=0;i<5;i++){
+    const pool=[];EVENTS.forEach(e=>{for(let j=0;j<e.w;j++)pool.push(e);});
+    const t=pick(pool).f();
+    if(t){toast(t,"event");news(t);return;}
+  }
+}
+function manageJV(){
+  if(!S.jvUnlocked&&custShare()>=BAL.jvShare){
+    S.jvUnlocked=true;
+    toast("🤝 Du bist jetzt groß genug für Joint Ventures! Die großen Bestandshalter rufen an. Schau im Firma-Tab.","event");
+    news("Joint Ventures freigeschaltet: Gebäudepakete verfügbar.");
+  }
+  if(!S.jvUnlocked)return;
+  if(S.jv){
+    S.jv.ids=S.jv.ids.filter(i=>S.buildings[i].status==="frei");
+    S.jv.months--;
+    if(S.jv.months<=0||S.jv.ids.length<3)S.jv=null;
+  }
+  if(!S.jv){
+    const free=S.buildings.filter(b=>b.status==="frei");
+    if(free.length>=3){
+      const shuffled=[...free].sort(()=>Math.random()-.5);
+      S.jv={partner:pick(JVPARTNERS),ids:shuffled.slice(0,Math.min(ri(3,4),free.length)).map(b=>b.id),months:BAL.jvRefresh};
+      toast(`🤝 Neues JV-Angebot von ${S.jv.partner} im Firma-Tab!`,"event");
+    }
+  }
+}
+function tick(){
+  if(S.paused||S.over)return;
+  S.month++;
+  S.effects.forEach(e=>e.m--);S.effects=S.effects.filter(e=>e.m>0);
+  convert();
+  const inc=S.buildings.reduce((a,b)=>{
+    if(b.status==="aktiv")return a+rateOf(b);
+    if(b.status==="kessel")return a+kRate(b);
+    if(b.status==="umbau"&&b.hadKessel)return a+kRate(b);
+    return a;},0);
+  const sal=S.installers*BAL.salary+S.sellers*BAL.salarySeller,int=S.loans*BAL.loanInt;
+  S.money+=inc-sal-int;S.lastPL={inc,sal,int};
+  S.energy=clamp(S.energy*(0.985+Math.random()*0.03),.7,1.9);
+  competitorsAct();
+  doEvent();
+  manageJV();
+  if(S.money<0&&S.money>BAL.brokeAt&&S.month%3===0)toast("💸 Konto im Minus. Die Bank ruft an. Sie klingt weniger plauderig.","bad");
+  checkEnd();
+  render();
+}
+function checkEnd(){
+  if(S.over)return;
+  if(S.buildings.every(b=>b.status==="aktiv")){S.over=true;endScreen(true);}
+  else if(S.money<BAL.brokeAt){S.over=true;endScreen(false);}
+}
+function endScreen(win){
+  const yrs=Math.floor(S.month/12),mo=S.month%12;
+  $("#endBox").innerHTML=win?`
+    <h1>🏆 100 % DEKARBONISIERT!</h1>
+    <div class="tag">Ganz Kesselhausen läuft auf deinen Wärmepumpen.</div>
+    <p style="font-size:14px;font-weight:700">Der Schornsteinfeger ist arbeitslos, aber glücklich. Detlef bekommt ein Denkmal. Vattenfail verkauft jetzt Grills.</p>
+    <div class="endstats">
+      <div>Dauer<b>${yrs} J ${mo} M</b></div>
+      <div>CO₂ gespart<b>${Math.round(S.co2)} t/a</b></div>
+      <div>Kontostand<b>${fmt(S.money)}</b></div>
+      <div>Ruf<b>${S.rep}/100</b></div>
+    </div>
+    <button class="bigbtn" onclick="location.reload()">Nochmal! Nächste Stadt 🌍</button>`:`
+    <h1>📉 INSOLVENZ</h1>
+    <div class="tag">„In Eigenverwaltung.“ Klingt besser, ist es nicht.</div>
+    <p style="font-size:14px;font-weight:700">Die Bank hat aufgehört zu plaudern. ThermoKlaus übernimmt dein Büro und montiert die Kaffeemaschine über Kopf.</p>
+    <div class="endstats">
+      <div>Durchgehalten<b>${yrs} J ${mo} M</b></div>
+      <div>CO₂ gespart<b>${Math.round(S.co2)} t/a</b></div>
+      <div>Dekarbonisiert<b>${Math.round(decarbShare()*100)} %</b></div>
+    </div>
+    <button class="bigbtn" onclick="location.reload()">Neustart – diesmal mit Plan 🔁</button>`;
+  $("#end").style.display="flex";
+  if(win)confetti();
+}
+function confetti(){
+  const E=["🎉","🌱","💚","🎊","♨️","🥳"];
+  for(let i=0;i<40;i++){
+    const s=document.createElement("div");
+    s.textContent=pick(E);
+    s.style.cssText=`position:fixed;z-index:90;top:-30px;left:${rnd(0,100)}vw;font-size:${rnd(16,30)}px;pointer-events:none;transition:transform ${rnd(2,4)}s linear,opacity 3s;`;
+    document.body.appendChild(s);
+    requestAnimationFrame(()=>{s.style.transform=`translateY(110vh) rotate(${rnd(-180,180)}deg)`;s.style.opacity=.7;});
+    setTimeout(()=>s.remove(),4200);
+  }
+}
+
+/* ============ Loop & UI wiring ============ */
+let timer=null;
+function loop(){
+  clearTimeout(timer);
+  timer=setTimeout(()=>{tick();loop();},S.speed===2?BAL.tickFastMs:BAL.tickMs);
+}
+window.startGame=()=>{$("#intro").style.display="none";S.paused=false;loop();
+  toast("📞 Tipp: Kesseltausch = billiger Kundenfang, Wärmepumpe = echtes Geld. Die Karte kann man schieben!","event");};
+$("#btnPause").onclick=()=>{S.paused=!S.paused;
+  $("#btnPause").textContent=S.paused?"▶":"⏸";
+  $("#btnPause").classList.toggle("on",S.paused);};
+$("#btnFast").onclick=()=>{S.speed=S.speed===1?2:1;
+  $("#btnFast").classList.toggle("on",S.speed===2);};
+document.querySelectorAll("nav button").forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll("nav button").forEach(x=>x.classList.remove("on"));
+    document.querySelectorAll(".panel").forEach(x=>x.classList.remove("on"));
+    b.classList.add("on");$("#p-"+b.dataset.p).classList.add("on");
+  };
+});
+
+/* ============ Init ============ */
+genCity();
+$("#mapwrap").innerHTML=`<svg id="citysvg" width="${MW}" height="${MH}" viewBox="0 0 ${MW} ${MH}">
+  <g id="ground">${buildGround()}</g><g id="dyn"></g></svg>`;
+$("#citysvg").addEventListener("click",e=>{
+  const t=e.target.closest(".bld");
+  if(t)openSheet(+t.dataset.id);
+});
+render();
+const mw=$("#mapwrap");
+mw.scrollLeft=(MW-mw.clientWidth)/2;
+</script>
+</body>
+</html>
