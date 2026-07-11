@@ -279,6 +279,7 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
     <div class="tag">Kesselhausen an der Fern, 2026. Es riecht nach Heizöl und Chancen.</div>
     <ul>
       <li>🏢 <b>Tippe auf ein Gebäude:</b> Wärmepumpen-Contracting (teuer, volle Rate) oder günstiger <b>Kesseltausch</b> – sichert dir den Kunden, dekarbonisiert aber nicht. Braucht auch Monteure (⅓ der Zeit). Später upgraden!</li>
+      <li>🏚️ <b>Jeder Gebäudetyp tickt anders:</b> Altbau will erst saniert werden, Villen haben Denkmalschutz, Plattenbau gibt's im Mengenrabatt.</li>
       <li>👷 <b>Bau deine Firma aus:</b> Monteure (Umbau-Tempo), Vertriebler (Abschlussquote), Prioritäten, F&E, Einkauf.</li>
       <li>😏 <b>Konkurrenz schnappt sich freie Gebäude.</b> Abwerben geht – deine Kunden sind dagegen sicher.</li>
       <li>🤝 <b>Ab 25 % Kundenanteil: Joint Ventures.</b> Ganze Gebäudepakete auf einen Schlag – der Partner kassiert mit.</li>
@@ -344,6 +345,13 @@ const TYPES={
   reihe:{e:"🏘️",l:"Reihenhaus-Zeile",fl:[2,2]},
   villa:{e:"🏛️",l:"Gründerzeit-Villa",fl:[2,3]},
 };
+const TRAITS={
+  altbau:{tag:"🧱 unsaniert",l:"Unsaniert: WP-Chance −25 %, Rate −20 % – außer du sanierst mit (+350 €/WE)",chance:-.25,sanCostWE:350},
+  villa:{tag:"🏛️ Denkmalschutz",l:"Denkmalschutz: Umbau nur halb so schnell, dafür Ruf +2 extra bei Fertigstellung",speed:.5,repDone:2},
+  platte:{tag:"📦 Großbestellung",l:"Plattenbau-Logistik: CAPEX −10 %",capex:.9},
+  reihe:{tag:"🤯 WEG-Chaos",l:"WEG-Chaos: Abschlusschance −8 %",chance:-.08},
+};
+const hasTech=id=>!!(S.tech&&S.tech.has(id));
 const HEIZ=["Gaskessel Bj. 1998","Ölkessel mit Charakter","Nachtspeicher (autsch)",
   "34 Gasetagenheizungen, alle einzeln","Konstanttemperaturkessel, läuft konstant schlecht",
   "Kessel, Baujahr unbekannt, Geräusch bekannt"];
@@ -490,17 +498,23 @@ const S={
 const subBase=.30;
 const effSub=()=>clamp(subBase+S.effects.filter(e=>e.k==="sub").reduce((a,e)=>a+e.d,0),0,.55);
 const acqBonus=()=>S.effects.filter(e=>e.k==="acq").reduce((a,e)=>a+e.d,0);
-const capexOf=b=>b.units*BAL.capexWE*(1-effSub())*(1-S.buyDisc);
+const capexOf=b=>b.units*BAL.capexWE*(1-effSub())*(1-S.buyDisc)*((TRAITS[b.t]&&TRAITS[b.t].capex)||1);
+const sanCostOf=b=>b.t==="altbau"?b.units*TRAITS.altbau.sanCostWE:0;
 const kesselCost=b=>b.units*BAL.kesselWE;
 const pitchOf=b=>BAL.pitchBase+b.units*BAL.pitchWE;
 const poachFeeOf=b=>b.units*BAL.poachFeeWE;
 const upgCost=b=>capexOf(b)*BAL.upgFactor+pitchOf(b)*.5;
 const instSalary=()=>Math.round(S.installers*BAL.salary*(1+Math.max(0,S.installers-4)*.05));
-const rateOf=b=>b.units*BAL.rateWE*S.energy*(b.jv?1-BAL.jvCut:1)*(S.rnd?1+BAL.rndBoost:1);
+const rateOf=b=>b.units*BAL.rateWE*S.energy*(b.jv?1-BAL.jvCut:1)*(S.rnd?1+BAL.rndBoost:1)
+  *(b.malus&&!hasTech("propan")?.8:1);
 const kRate=b=>b.units*BAL.kesselRateWE*S.energy*(b.jv?1-BAL.jvCut:1);
-const chanceOf=(b,poach)=>clamp(.5+S.rep*.004+(S.energy>1.15?.08:0)+acqBonus()
-  +S.sellers*BAL.sellerChance+PRIOS[S.prio].chance-(poach?.22:0),
-  poach&&S.rep>70?.20:.12,.95);
+const chanceOf=(b,poach,skipAltbau)=>{
+  const tr=TRAITS[b.t];
+  let c=.5+S.rep*.004+(S.energy>1.15?.08:0)+acqBonus()
+    +S.sellers*BAL.sellerChance+PRIOS[S.prio].chance-(poach?.22:0);
+  if(tr&&tr.chance&&(b.t!=="altbau"||!(skipAltbau||b.saniert||hasTech("propan"))))c+=tr.chance;
+  return clamp(c,poach&&S.rep>70?.20:.12,.95);
+};
 
 /* ============ Iso city ============ */
 const TW=52,TH=26,FLPX=9;
@@ -750,7 +764,7 @@ function drawBuilding(b){
     b.status==="kessel"?"♨️ dein Kesseltausch-Kunde – Upgrade offen":
     b.status==="komp"?`${b.comp.emoji} bei ${b.comp.name}`:
     "💨 frei – noch fossil";
-  let s=`<g class="bld" data-id="${b.id}"><title>${esc(`${TYPES[b.t].e} ${b.name} · ${TYPES[b.t].l} · ${b.units} WE\n${stLbl}`)}</title>`;
+  let s=`<g class="bld" data-id="${b.id}"><title>${esc(`${TYPES[b.t].e} ${b.name} · ${TYPES[b.t].l} · ${b.units} WE\n${stLbl}${TRAITS[b.t]?"\n"+traitTag(b):""}`)}</title>`;
   s+=`<polygon points="${pA.X},${pA.Y} ${pB.X},${pB.Y} ${pC.X},${pC.Y} ${pD.X},${pD.Y}" fill="${statusColor(b)}" opacity="${b.status==="frei"?.5:.95}" stroke="rgba(38,50,63,.4)"/>`;
   s+=b.body;
   if(b.status==="umbau")s+=scaffold(b,h);
@@ -810,7 +824,9 @@ const custShare=()=>S.buildings.filter(b=>b.owner==="you").reduce((a,b)=>a+b.uni
 
 /* ============ Save / Load ============ */
 const SAVE_KEY="wwt_save_v5";
-const BSAVE=["owner","status","done","jv","hadKessel","kesselJob","saniert","stoer","compUntil"];
+const BSAVE=["owner","status","done","jv","hadKessel","kesselJob","saniert","malus","stoer","compUntil"];
+const traitTag=b=>{const tr=TRAITS[b.t];if(!tr)return "";
+  return b.t==="altbau"&&(b.saniert||hasTech("propan"))?"🧱 saniert":tr.tag;};
 const SSAVE=["money","month","rep","co2","energy","installers","sellers","loans","buyDisc",
   "freeze","prio","rnd","effects","news","jvUnlocked","citySeed","diff","lastPL"];
 function saveGame(){
@@ -951,28 +967,37 @@ function openSheet(id){
     <tr><td>Heizung</td><td>${b.status==="kessel"?"Neuer Effizienzkessel (deiner)":b.heiz}</td></tr>`;
   if(b.status==="frei"||b.status==="komp"){
     const poach=b.status==="komp";
-    const capex=capexOf(b),kcost=kesselCost(b),pitch=pitchOf(b),fee=poach?poachFeeOf(b):0;
+    const alt=b.t==="altbau"&&!b.saniert&&!hasTech("propan");
+    const capex=capexOf(b),kcost=kesselCost(b),pitch=pitchOf(b),fee=poach?poachFeeOf(b):0,sanC=sanCostOf(b);
     body=facts+`
       <tr><td>💚 Wärmepumpe: CAPEX (n. ${Math.round(effSub()*100)} % Förd.)</td><td>${fmt(capex)}</td></tr>
+      ${alt?`<tr><td>🧱 Mit Sanierung (+350 €/WE)</td><td>${fmt(capex+sanC)}</td></tr>`:""}
       <tr><td>♨️ Kesseltausch (keine Förderung, logisch)</td><td>${fmt(kcost)}</td></tr>
       <tr><td>Vertriebskosten</td><td>${fmt(pitch)}</td></tr>
       ${poach?`<tr><td>Wechselprämie</td><td>${fmt(fee)}</td></tr>`:""}
-      <tr><td>Rate: Wärmepumpe / Kessel</td><td>~${fmt(rateOf(b))} / ${fmt(kRate(b))}</td></tr></table>
+      <tr><td>Rate: Wärmepumpe / Kessel</td><td>~${fmt(rateOf(b))}${alt?" (unsan. −20 %)":""} / ${fmt(kRate(b))}</td></tr></table>
+      ${TRAITS[b.t]?`<p style="font-size:12.5px;margin:0 0 8px;font-weight:700">${traitTag(b)} – ${b.t==="altbau"&&!alt?"Sanierung erledigt, volle Leistung.":TRAITS[b.t].l}</p>`:""}
       ${poach?`<p style="font-size:13px;margin:0 0 8px">Aktuell bei <b style="color:${b.comp.color}">${b.comp.emoji} ${b.comp.name}</b> – die machen „Contracting“, aber mit Gas. Frechheit.</p>`:""}
       <button class="bigbtn ${poach?"poach":""}" ${S.money<capex+pitch+fee?"disabled":""}
-        onclick="attempt(${b.id},'${poach?"poach":"wp"}')">${S.money<capex+pitch+fee?"Zu wenig Geld 💸":(poach?"Abwerben + Wärmepumpe 😏":"Wärmepumpen-Contracting 🤝")}</button>
+        onclick="attempt(${b.id},'wp')">${S.money<capex+pitch+fee?"Zu wenig Geld 💸":(poach?"Abwerben + Wärmepumpe 😏":"Wärmepumpen-Contracting 🤝")+(alt?" (unsaniert)":"")}</button>
+      ${alt?`<button class="bigbtn upg" ${S.money<capex+sanC+pitch+fee?"disabled":""}
+        onclick="attempt(${b.id},'wpsan')">${S.money<capex+sanC+pitch+fee?"Zu wenig Geld 💸":"Sanierung + Wärmepumpe 🧱"}</button>`:""}
       ${poach?"":`<button class="bigbtn kessel" ${S.money<kcost+pitch?"disabled":""}
         onclick="attempt(${b.id},'kessel')">${S.money<kcost+pitch?"Zu wenig Geld 💸":"Nur Kesseltausch ♨️ (Sparvariante)"}</button>`}
-      <div class="chance">Abschlusschance: ~${Math.round(chanceOf(b,poach)*100)} %</div>`;
+      <div class="chance">Abschlusschance: ~${Math.round(chanceOf(b,poach)*100)} %${alt?` · mit Sanierung: ~${Math.round(chanceOf(b,poach,true)*100)} %`:""}</div>`;
   }else if(b.status==="kessel"){
-    const cost=upgCost(b);
+    const alt=b.t==="altbau"&&!b.saniert&&!hasTech("propan");
+    const cost=upgCost(b),sanC=sanCostOf(b);
     body=facts+`
       <tr><td>Aktuelle Rate (Kessel)</td><td>~${fmt(kRate(b))}/Mon.</td></tr>
-      <tr><td>Rate nach Upgrade</td><td>~${fmt(rateOf(b))}/Mon.</td></tr>
-      <tr><td>Upgrade (CAPEX −15 % + Kundenpflege)</td><td>${fmt(cost)}</td></tr></table>
+      <tr><td>Rate nach Upgrade</td><td>~${fmt(rateOf(b))}${alt?" (unsan. −20 %)":""}/Mon.</td></tr>
+      <tr><td>Upgrade (CAPEX −15 % + Kundenpflege)</td><td>${fmt(cost)}</td></tr>
+      ${alt?`<tr><td>🧱 Upgrade mit Sanierung</td><td>${fmt(cost+sanC)}</td></tr>`:""}</table>
       <p style="font-size:13px;margin:0 0 8px">♨️ Dein Kunde, dein Kessel – aber dekarbonisiert ist hier noch nichts. Zuschlag garantiert. Der Kessel läuft weiter, bis die Wärmepumpe steht.</p>
       <button class="bigbtn upg" ${S.money<cost?"disabled":""} onclick="attempt(${b.id},'upgrade')">
-        ${S.money<cost?"Zu wenig Geld 💸":"Upgrade auf Wärmepumpe 🔁"}</button>`;
+        ${S.money<cost?"Zu wenig Geld 💸":"Upgrade auf Wärmepumpe 🔁"+(alt?" (unsaniert)":"")}</button>
+      ${alt?`<button class="bigbtn" ${S.money<cost+sanC?"disabled":""} onclick="attempt(${b.id},'upgradesan')">
+        ${S.money<cost+sanC?"Zu wenig Geld 💸":"Upgrade + Sanierung 🧱"}</button>`:""}`;
   }else if(b.status==="umbau"){
     body=facts+`<tr><td>${b.kesselJob?"Kesseltausch":"Umbau"}-Fortschritt</td><td>${b.done}/${b.units} WE</td></tr>
       ${b.hadKessel?`<tr><td>Übergangsrate (Kessel läuft noch)</td><td>~${fmt(kRate(b))}/Mon.</td></tr>`:""}</table>
@@ -1019,19 +1044,23 @@ window.resolveDecision=k=>{
 /* ============ Actions ============ */
 window.attempt=(id,mode)=>{
   const b=S.buildings[id];
-  if(mode==="upgrade"){
-    const cost=upgCost(b);
+  if(mode==="upgrade"||mode==="upgradesan"){
+    const san=mode==="upgradesan";
+    const cost=upgCost(b)+(san?sanCostOf(b):0);
     if(S.money<cost||b.status!=="kessel")return;
     S.money-=cost;b.status="umbau";b.done=0;b.hadKessel=true;
+    if(san)b.saniert=true;
+    else if(b.t==="altbau"&&!b.saniert&&!hasTech("propan"))b.malus=true;
     toast("🔁 Upgrade läuft! Der Gaskessel zählt seine letzten Tage. Detlef ist gerührt.","win");
     news(`Upgrade auf Wärmepumpe: ${b.name}.`);
     closeSheet();render();return;
   }
-  const poach=mode==="poach",kessel=mode==="kessel";
-  const capex=kessel?kesselCost(b):capexOf(b),pitch=pitchOf(b),fee=poach?poachFeeOf(b):0;
+  const poach=b.status==="komp",kessel=mode==="kessel",san=mode==="wpsan";
+  if(kessel&&poach)return;
+  const capex=kessel?kesselCost(b):capexOf(b)+(san?sanCostOf(b):0),pitch=pitchOf(b),fee=poach?poachFeeOf(b):0;
   if(S.money<capex+pitch+fee)return;
   S.money-=pitch;
-  if(Math.random()<chanceOf(b,poach)){
+  if(Math.random()<chanceOf(b,poach,kessel||san)){
     S.money-=capex+fee;
     if(poach)news(`Du wirbst ${b.name} von ${b.comp.name} ab. 😏`);
     b.owner="you";b.comp=null;
@@ -1041,8 +1070,10 @@ window.attempt=(id,mode)=>{
       news(`Kesseltausch beauftragt: ${b.name} (${b.units} WE).`);
     }else{
       b.status="umbau";b.done=0;
+      if(san){b.saniert=true;S.rep=clamp(S.rep+1,0,100);}
+      else if(b.t==="altbau"&&!b.saniert&&!hasTech("propan"))b.malus=true;
       toast(pick(poach?POACHWIN:WINLINES),"win");
-      news(`Auftrag gewonnen: ${b.name} (${b.units} WE).`);
+      news(`Auftrag gewonnen: ${b.name} (${b.units} WE)${san?" – inkl. Sanierung 🧱":""}.`);
     }
     S.rep=clamp(S.rep+1,0,100);
   }else{
@@ -1106,11 +1137,13 @@ function convert(){
         news(`Kesseltausch abgeschlossen: ${b.name} (${b.units} WE).`);
       }
     }else{
-      const take=Math.min(cap,b.units-b.done);
-      b.done+=take;cap-=take;
+      const spd=(TRAITS[b.t]&&TRAITS[b.t].speed&&!hasTech("fluester")?TRAITS[b.t].speed:1);
+      const take=Math.min(Math.max(1,Math.floor(cap*spd)),b.units-b.done);
+      b.done+=take;cap-=Math.ceil(take/spd);
       if(b.done>=b.units){
-        b.status="aktiv";S.co2+=b.units*(b.hadKessel?1.7:2.1);S.rep=clamp(S.rep+2,0,100);
-        toast(`🌱 ${b.name} fertig! Der alte Kessel geht in Rente.`,"win");
+        b.status="aktiv";S.co2+=b.units*(b.hadKessel?1.7:2.1);
+        S.rep=clamp(S.rep+2+((TRAITS[b.t]&&TRAITS[b.t].repDone)||0),0,100);
+        toast(`🌱 ${b.name} fertig! Der alte Kessel geht in Rente.${b.t==="villa"?" Das Denkmalamt applaudiert leise.":""}`,"win");
         news(`Inbetriebnahme: ${b.name}. Wärmepumpe läuft.`);
       }
     }
