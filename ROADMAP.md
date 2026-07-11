@@ -2,6 +2,12 @@
 
 *Status: July 2026 · reviewed against `waermewende-tycoon-v4.html` (commit `bc6aa82`)*
 
+> **Update:** All of **Tier 1 (1.1–1.7)** and **Tier 2 (2.1–2.7)** shipped on this branch,
+> plus a pacing retune validated by scripted playthroughs (wins in ~4.5–8.7 game years on all
+> difficulties, no bankruptcies; Klimaziele moved to 2030/2035 so they actually bite).
+> **Tier 3 (Fernwärme, districts, bigger map, campaign, endless mode) remains open** and is
+> the natural next PR.
+
 ## 1. Where the game stands
 
 **What already works well**
