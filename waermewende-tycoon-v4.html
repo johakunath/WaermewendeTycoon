@@ -288,7 +288,7 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
       <li>🏚️ <b>Jeder Gebäudetyp tickt anders:</b> Altbau will erst saniert werden, Villen haben Denkmalschutz, Plattenbau gibt's im Mengenrabatt.</li>
       <li>👷 <b>Bau deine Firma aus:</b> Monteure (Umbau-Tempo – und Reparaturen bei ❄️ Störungen!), Vertriebler (Abschlussquote), Prioritäten, F&E, Einkauf.</li>
       <li>😏 <b>Konkurrenz schnappt sich freie Gebäude</b> – und umgarnt später deine Kessel-Kunden! Nur Wärmepumpen-Kunden sind sicher. Dafür laufen Konkurrenz-Verträge auch mal aus.</li>
-      <li>🎯 <b>Stadtziele:</b> 30 % bis Ende 2032, 60 % bis Ende 2038 – schaffst du sie, gibt's Extra-Förderung. Sonst nicht.</li>
+      <li>🎯 <b>Stadtziele:</b> 30 % bis Ende 2030, 60 % bis Ende 2035 – schaffst du sie, gibt's Extra-Förderung. Sonst nicht.</li>
       <li>🤝 <b>Ab 25 % Kundenanteil: Joint Ventures.</b> Ganze Gebäudepakete auf einen Schlag – der Partner kassiert mit.</li>
       <li>🏆 <b>Ziel: 100 % dekarbonisiert</b> (Thermometer oben). Pleite = Insolvenz in Eigenverwaltung (klingt besser, ist es nicht).</li>
     </ul>
@@ -474,10 +474,10 @@ const DECISIONS=[
 
 /* ============ Balance ============ */
 const BAL={
-  startMoney:500000, capexWE:2600, rateWE:140, kesselWE:600, kesselRateWE:45,
-  pitchBase:500, pitchWE:40, salary:5000, salarySeller:4000, convWE:10,
+  startMoney:500000, capexWE:2600, rateWE:120, kesselWE:600, kesselRateWE:38,
+  pitchBase:500, pitchWE:40, salary:5000, salarySeller:4000, convWE:8,
   loanAmt:250000, loanInt:6000, poachFeeWE:120, upgFactor:.85,
-  compStart:6, compProb:.10, eventProb:.25, brokeAt:-150000,
+  compStart:4, compProb:.12, eventProb:.25, brokeAt:-150000,
   tickMs:7500, tickFastMs:2500, jvShare:.25, jvDiscount:.15, jvCut:.20, jvRefresh:6,
   sellerChance:.04, maxSellers:4, rndCost:120000, rndBoost:.12,
 };
@@ -510,7 +510,7 @@ const S={
   hist:[], stat:{won:0,lost:0,poached:0,upgrades:0,repairs:0,earned:0,spent:0},
   lastPL:{inc:0,sal:0,int:0},
 };
-const GOALS=[{m:84,pct:30},{m:156,pct:60}];
+const GOALS=[{m:60,pct:30},{m:120,pct:60}];
 const goalYear=g=>2025+g.m/12;
 const subBase=.30;
 const effSub=()=>clamp(subBase+S.effects.filter(e=>e.k==="sub").reduce((a,e)=>a+e.d,0),0,.55);
@@ -590,7 +590,7 @@ function genCity(seed){
         const st=pick(STREETS);used[st]=(used[st]||0)+ri(1,7);
         const b={
           id:id++,gx:ox+pb.x,gy:oy+pb.y,w:pb.w,d:pb.d,floors,t:pb.t,
-          name:st+" "+used[st],units:Math.max(4,Math.round(pb.w*pb.d*floors*1.4*rnd(.9,1.15))),
+          name:st+" "+used[st],units:Math.max(5,Math.round(pb.w*pb.d*floors*1.75*rnd(.9,1.15))),
           heiz:pick(HEIZ),desc:pick(DESCS),
           owner:null,comp:null,status:"frei",done:0,jv:false,hadKessel:false,
         };
@@ -1422,11 +1422,11 @@ function checkEnd(){
 }
 /* ============ Score & Highscores ============ */
 const GRADES=[
-  [140000,"A+","Kesselflüsterer:in – die Wärmepumpen hören auf dich"],
-  [110000,"A","Wärmewende-Wunderkind"],
-  [85000,"B","Solide saniert – Detlef nickt zweimal"],
-  [60000,"C","Detlefs Durchschnitt"],
-  [35000,"D","Knapp am Rohrbruch vorbei"],
+  [230000,"A+","Kesselflüsterer:in – die Wärmepumpen hören auf dich"],
+  [190000,"A","Wärmewende-Wunderkind"],
+  [155000,"B","Solide saniert – Detlef nickt zweimal"],
+  [120000,"C","Detlefs Durchschnitt"],
+  [80000,"D","Knapp am Rohrbruch vorbei"],
   [-1e15,"F","Praktikant:in der Wärmewende"],
 ];
 const scoreOf=()=>Math.max(0,Math.round((100000-S.month*250+S.money/20+S.rep*300+S.co2*40)*dv("scoreM")));
