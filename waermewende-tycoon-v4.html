@@ -278,7 +278,7 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
     <h1>🔥→🌱 WÄRMEWENDE TYCOON</h1>
     <div class="tag">Kesselhausen an der Fern, 2026. Es riecht nach Heizöl und Chancen.</div>
     <ul>
-      <li>🏢 <b>Tippe auf ein Gebäude:</b> Wärmepumpen-Contracting (teuer, volle Rate) oder günstiger <b>Kesseltausch</b> – sichert dir den Kunden, dekarbonisiert aber nicht. Später upgraden!</li>
+      <li>🏢 <b>Tippe auf ein Gebäude:</b> Wärmepumpen-Contracting (teuer, volle Rate) oder günstiger <b>Kesseltausch</b> – sichert dir den Kunden, dekarbonisiert aber nicht. Braucht auch Monteure (⅓ der Zeit). Später upgraden!</li>
       <li>👷 <b>Bau deine Firma aus:</b> Monteure (Umbau-Tempo), Vertriebler (Abschlussquote), Prioritäten, F&E, Einkauf.</li>
       <li>😏 <b>Konkurrenz schnappt sich freie Gebäude.</b> Abwerben geht – deine Kunden sind dagegen sicher.</li>
       <li>🤝 <b>Ab 25 % Kundenanteil: Joint Ventures.</b> Ganze Gebäudepakete auf einen Schlag – der Partner kassiert mit.</li>
@@ -494,10 +494,13 @@ const capexOf=b=>b.units*BAL.capexWE*(1-effSub())*(1-S.buyDisc);
 const kesselCost=b=>b.units*BAL.kesselWE;
 const pitchOf=b=>BAL.pitchBase+b.units*BAL.pitchWE;
 const poachFeeOf=b=>b.units*BAL.poachFeeWE;
+const upgCost=b=>capexOf(b)*BAL.upgFactor+pitchOf(b)*.5;
+const instSalary=()=>Math.round(S.installers*BAL.salary*(1+Math.max(0,S.installers-4)*.05));
 const rateOf=b=>b.units*BAL.rateWE*S.energy*(b.jv?1-BAL.jvCut:1)*(S.rnd?1+BAL.rndBoost:1);
 const kRate=b=>b.units*BAL.kesselRateWE*S.energy*(b.jv?1-BAL.jvCut:1);
 const chanceOf=(b,poach)=>clamp(.5+S.rep*.004+(S.energy>1.15?.08:0)+acqBonus()
-  +S.sellers*BAL.sellerChance+PRIOS[S.prio].chance-(poach?.22:0),.12,.95);
+  +S.sellers*BAL.sellerChance+PRIOS[S.prio].chance-(poach?.22:0),
+  poach&&S.rep>70?.20:.12,.95);
 
 /* ============ Iso city ============ */
 const TW=52,TH=26,FLPX=9;
@@ -743,7 +746,7 @@ function drawBuilding(b){
   const h=b.floors*FLPX,m=.18;
   const pA=iso(b.gx-m,b.gy-m),pB=iso(b.gx+b.w+m,b.gy-m),pC=iso(b.gx+b.w+m,b.gy+b.d+m),pD=iso(b.gx-m,b.gy+b.d+m);
   const stLbl=b.status==="aktiv"?"🌱 Wärmepumpe läuft":
-    b.status==="umbau"?`🏗️ im Umbau (${b.done}/${b.units} WE)`:
+    b.status==="umbau"?(b.kesselJob?`♨️ Kesseltausch läuft (${b.done}/${b.units} WE)`:`🏗️ im Umbau (${b.done}/${b.units} WE)`):
     b.status==="kessel"?"♨️ dein Kesseltausch-Kunde – Upgrade offen":
     b.status==="komp"?`${b.comp.emoji} bei ${b.comp.name}`:
     "💨 frei – noch fossil";
@@ -888,7 +891,7 @@ function renderTeam(){
   <div class="card"><h3>📊 Monatsabschluss</h3>
     <table class="pl">
       <tr><td>Contracting-Raten</td><td>+${fmt(p.inc)}</td></tr>
-      <tr><td>Gehälter (${S.installers} 👷 + ${S.sellers} 💼)</td><td>−${fmt(p.sal)}</td></tr>
+      <tr><td>Gehälter (${S.installers} 👷 + ${S.sellers} 💼${S.installers>4?" · Fachkräftezuschlag":""})</td><td>−${fmt(p.sal)}</td></tr>
       <tr><td>Kreditzinsen (${S.loans} Kredite)</td><td>−${fmt(p.int)}</td></tr>
       <tr class="sum"><td>Cashflow</td><td>${p.inc-p.sal-p.int>=0?"+":"−"}${fmt(Math.abs(p.inc-p.sal-p.int))}</td></tr>
     </table></div>
@@ -898,7 +901,7 @@ function renderTeam(){
     </div></div>
   ${jvCard()}
   <div class="card"><div class="row"><div>
-    <h3>👷 Monteur anheuern</h3><p>+${BAL.convWE} WE Umbau/Monat. 12.000 € plus ${fmt(BAL.salary)}/Monat Gehalt (und Kaffee).</p></div>
+    <h3>👷 Monteur anheuern</h3><p>+${BAL.convWE} WE Umbau/Monat. 12.000 € plus ${fmt(BAL.salary)}/Monat Gehalt (und Kaffee). Ab dem 5. Monteur: Fachkräftezuschlag +5 %/Kopf.</p></div>
     <button class="buy" onclick="hire()" title="Einmalig 12.000 € + ${fmt(BAL.salary)}/Monat. Erhöht das Umbau-Tempo." ${S.money<12000?"disabled":""}>12.000 €</button></div></div>
   <div class="card"><div class="row"><div>
     <h3>💼 Vertriebler einstellen</h3><p>+4 % Abschlusschance. ${fmt(BAL.salarySeller)}/Monat. Bringt eigene Anekdoten mit. (${S.sellers}/${BAL.maxSellers})</p></div>
@@ -912,9 +915,12 @@ function renderTeam(){
   <div class="card"><div class="row"><div>
     <h3>📦 Rahmenvertrag Einkauf</h3><p>Wärmepumpen in Palettenware: CAPEX −8 %. (${Math.round(S.buyDisc*100)} % aktiv, max. 24 %)</p></div>
     <button class="buy" onclick="bulk()" title="Einmalig 50.000 €. CAPEX pro Abschluss −8 % (kumulativ bis 24 %)." ${S.money<50000||S.buyDisc>=.24?"disabled":""}>50.000 €</button></div></div>
-  <div class="card"><div class="row"><div>
-    <h3>🏦 Notkredit</h3><p>+${fmt(BAL.loanAmt)} sofort, dafür ${fmt(BAL.loanInt)}/Monat Zinsen für immer. Die Bank lächelt. Zu breit.</p></div>
-    <button class="buy" onclick="loan()" title="+${fmt(BAL.loanAmt)} sofort, dafür ${fmt(BAL.loanInt)}/Monat Zinsen dauerhaft. Max. 3 Kredite." ${S.loans>=3?"disabled":""}>Abschließen</button></div></div>`;
+  <div class="card"><h3>🏦 Notkredit (${S.loans}/3)</h3>
+    <p>+${fmt(BAL.loanAmt)} sofort, dafür ${fmt(BAL.loanInt)}/Monat Zinsen – bis du tilgst (${fmt(BAL.loanAmt*1.1)}). Die Bank lächelt. Zu breit.</p>
+    <div class="row">
+      <button class="buy" onclick="loan()" title="+${fmt(BAL.loanAmt)} sofort, ${fmt(BAL.loanInt)}/Monat Zinsen bis zur Tilgung. Max. 3 Kredite." ${S.loans>=3?"disabled":""}>Abschließen</button>
+      <button class="buy" onclick="repay()" title="Zahlt ${fmt(BAL.loanAmt*1.1)} zurück und beendet die Zinsen eines Kredits." ${S.loans<1||S.money<BAL.loanAmt*1.1?"disabled":""}>Tilgen ${fmt(BAL.loanAmt*1.1)}</button>
+    </div></div>`;
 }
 function renderNews(){
   if(!document.querySelector("#p-news.on"))return;
@@ -959,18 +965,18 @@ function openSheet(id){
         onclick="attempt(${b.id},'kessel')">${S.money<kcost+pitch?"Zu wenig Geld 💸":"Nur Kesseltausch ♨️ (Sparvariante)"}</button>`}
       <div class="chance">Abschlusschance: ~${Math.round(chanceOf(b,poach)*100)} %</div>`;
   }else if(b.status==="kessel"){
-    const cost=capexOf(b)*BAL.upgFactor;
+    const cost=upgCost(b);
     body=facts+`
       <tr><td>Aktuelle Rate (Kessel)</td><td>~${fmt(kRate(b))}/Mon.</td></tr>
       <tr><td>Rate nach Upgrade</td><td>~${fmt(rateOf(b))}/Mon.</td></tr>
-      <tr><td>Upgrade-CAPEX (Bestandskunde −15 %)</td><td>${fmt(cost)}</td></tr></table>
-      <p style="font-size:13px;margin:0 0 8px">♨️ Dein Kunde, dein Kessel – aber dekarbonisiert ist hier noch nichts. Zuschlag garantiert, keine Vertriebskosten. Der Kessel läuft weiter, bis die Wärmepumpe steht.</p>
+      <tr><td>Upgrade (CAPEX −15 % + Kundenpflege)</td><td>${fmt(cost)}</td></tr></table>
+      <p style="font-size:13px;margin:0 0 8px">♨️ Dein Kunde, dein Kessel – aber dekarbonisiert ist hier noch nichts. Zuschlag garantiert. Der Kessel läuft weiter, bis die Wärmepumpe steht.</p>
       <button class="bigbtn upg" ${S.money<cost?"disabled":""} onclick="attempt(${b.id},'upgrade')">
         ${S.money<cost?"Zu wenig Geld 💸":"Upgrade auf Wärmepumpe 🔁"}</button>`;
   }else if(b.status==="umbau"){
-    body=facts+`<tr><td>Umbau-Fortschritt</td><td>${b.done}/${b.units} WE</td></tr>
+    body=facts+`<tr><td>${b.kesselJob?"Kesseltausch":"Umbau"}-Fortschritt</td><td>${b.done}/${b.units} WE</td></tr>
       ${b.hadKessel?`<tr><td>Übergangsrate (Kessel läuft noch)</td><td>~${fmt(kRate(b))}/Mon.</td></tr>`:""}</table>
-      <p style="font-size:13px">🚧 Deine Monteure sind dran. Es klopft, es bohrt, Detlef schaut zu und nickt fachmännisch.</p>`;
+      <p style="font-size:13px">${b.kesselJob?"♨️ Kesseltausch läuft – flotter Job, ein Drittel der Umbauzeit. Danach ist der Kunde deiner.":"🚧 Deine Monteure sind dran. Es klopft, es bohrt, Detlef schaut zu und nickt fachmännisch."}</p>`;
   }else if(b.status==="aktiv"){
     body=facts+`<tr><td>Einnahmen</td><td>~${fmt(rateOf(b))}/Mon.</td></tr>
       ${b.jv?`<tr><td>Joint Venture</td><td>Partner behält ${Math.round(BAL.jvCut*100)} %</td></tr>`:""}
@@ -1014,7 +1020,7 @@ window.resolveDecision=k=>{
 window.attempt=(id,mode)=>{
   const b=S.buildings[id];
   if(mode==="upgrade"){
-    const cost=capexOf(b)*BAL.upgFactor;
+    const cost=upgCost(b);
     if(S.money<cost||b.status!=="kessel")return;
     S.money-=cost;b.status="umbau";b.done=0;b.hadKessel=true;
     toast("🔁 Upgrade läuft! Der Gaskessel zählt seine letzten Tage. Detlef ist gerührt.","win");
@@ -1030,9 +1036,9 @@ window.attempt=(id,mode)=>{
     if(poach)news(`Du wirbst ${b.name} von ${b.comp.name} ab. 😏`);
     b.owner="you";b.comp=null;
     if(kessel){
-      b.status="kessel";S.co2+=b.units*.4;
-      toast("♨️ Kesseltausch! Nicht sexy, aber der Kunde ist deiner. Upgrade nicht vergessen.","win");
-      news(`Kesseltausch: ${b.name} (${b.units} WE) ist jetzt Kunde.`);
+      b.status="umbau";b.done=0;b.kesselJob=true;
+      toast("♨️ Kesseltausch beauftragt! Geht flott – ein Drittel der Umbauzeit. Upgrade nicht vergessen.","win");
+      news(`Kesseltausch beauftragt: ${b.name} (${b.units} WE).`);
     }else{
       b.status="umbau";b.done=0;
       toast(pick(poach?POACHWIN:WINLINES),"win");
@@ -1067,7 +1073,9 @@ window.hireSeller=()=>{S.money-=8000;S.sellers++;toast("💼 Neuer Vertriebler! 
 window.doRnd=()=>{S.money-=BAL.rndCost;S.rnd=true;toast("🔬 Die WärmeWumme 3000 ist da! Sie brummt beruhigend. Rate +12 %.","win");render();};
 window.mkt=()=>{S.money-=20000;S.rep=clamp(S.rep+8,0,100);toast("📣 Kampagne läuft. Detlef ist jetzt lokal berühmt.","win");render();};
 window.bulk=()=>{S.money-=50000;S.buyDisc=Math.min(.24,S.buyDisc+.08);toast("📦 Rahmenvertrag unterschrieben. Der Lieferant schickt Kalender.","win");render();};
-window.loan=()=>{S.money+=BAL.loanAmt;S.loans++;toast("🏦 Kredit da. Die Bank ruft jetzt öfter an. „Nur um zu plaudern.“","event");render();};
+window.loan=()=>{if(S.loans>=3)return;S.money+=BAL.loanAmt;S.loans++;toast("🏦 Kredit da. Die Bank ruft jetzt öfter an. „Nur um zu plaudern.“","event");render();};
+window.repay=()=>{const cost=BAL.loanAmt*1.1;if(S.loans<1||S.money<cost)return;S.money-=cost;S.loans--;
+  toast("🏦 Kredit getilgt! Die Bank klingt kurz enttäuscht, dann wieder professionell freundlich.","win");render();};
 
 /* ============ Simulation ============ */
 function competitorsAct(){
@@ -1088,12 +1096,23 @@ function convert(){
   let cap=Math.round(S.installers*BAL.convWE*PRIOS[S.prio].conv);
   for(const b of S.buildings.filter(b=>b.status==="umbau")){
     if(cap<=0)break;
-    const take=Math.min(cap,b.units-b.done);
-    b.done+=take;cap-=take;
-    if(b.done>=b.units){
-      b.status="aktiv";S.co2+=b.units*(b.hadKessel?1.7:2.1);S.rep=clamp(S.rep+2,0,100);
-      toast(`🌱 ${b.name} fertig! Der alte Kessel geht in Rente.`,"win");
-      news(`Inbetriebnahme: ${b.name}. Wärmepumpe läuft.`);
+    if(b.kesselJob){
+      /* Kesseltausch ist ein schneller Job: 1 Kapazitäts-WE schafft 3 Kessel-WE */
+      const take=Math.min(cap*3,b.units-b.done);
+      b.done+=take;cap-=Math.ceil(take/3);
+      if(b.done>=b.units){
+        b.kesselJob=false;b.status="kessel";S.co2+=b.units*.4;
+        toast(`♨️ Kesseltausch fertig: ${b.name}. Nicht sexy, aber der Kunde ist deiner.`,"win");
+        news(`Kesseltausch abgeschlossen: ${b.name} (${b.units} WE).`);
+      }
+    }else{
+      const take=Math.min(cap,b.units-b.done);
+      b.done+=take;cap-=take;
+      if(b.done>=b.units){
+        b.status="aktiv";S.co2+=b.units*(b.hadKessel?1.7:2.1);S.rep=clamp(S.rep+2,0,100);
+        toast(`🌱 ${b.name} fertig! Der alte Kessel geht in Rente.`,"win");
+        news(`Inbetriebnahme: ${b.name}. Wärmepumpe läuft.`);
+      }
     }
   }
 }
@@ -1144,7 +1163,7 @@ function tick(){
     if(b.status==="kessel")return a+kRate(b);
     if(b.status==="umbau"&&b.hadKessel)return a+kRate(b);
     return a;},0);
-  const sal=S.installers*BAL.salary+S.sellers*BAL.salarySeller,int=S.loans*BAL.loanInt;
+  const sal=instSalary()+S.sellers*BAL.salarySeller,int=S.loans*BAL.loanInt;
   S.money+=inc-sal-int;S.lastPL={inc,sal,int};
   S.energy=clamp(S.energy*(0.985+Math.random()*0.03),.7,1.9);
   competitorsAct();
