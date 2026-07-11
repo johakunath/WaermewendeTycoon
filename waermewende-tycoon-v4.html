@@ -730,6 +730,7 @@ function buildBody(b){
     if(b.w>=b.d){
       const R1={X:iso(b.gx,b.gy+b.d/2).X,Y:iso(b.gx,b.gy+b.d/2).Y-h-rh};
       const R2={X:iso(b.gx+b.w,b.gy+b.d/2).X,Y:iso(b.gx+b.w,b.gy+b.d/2).Y-h-rh};
+      s+=`<polygon points="${P([A2,B2,R2,R1])}" fill="${shade(TILE,.68)}"/>`; /* Dachfläche hinter dem First */
       s+=`<polygon points="${P([B2,C2,R2])}" fill="${shade(fc,.78)}"/>`;
       s+=`<polygon points="${P([D2,C2,R2,R1])}" fill="${TILE}"/>`;
       s+=tileLines(D2,C2,R1,R2);
@@ -737,6 +738,7 @@ function buildBody(b){
     }else{
       const R1={X:iso(b.gx+b.w/2,b.gy).X,Y:iso(b.gx+b.w/2,b.gy).Y-h-rh};
       const R2={X:iso(b.gx+b.w/2,b.gy+b.d).X,Y:iso(b.gx+b.w/2,b.gy+b.d).Y-h-rh};
+      s+=`<polygon points="${P([A2,D2,R2,R1])}" fill="${shade(TILE,.68)}"/>`; /* Dachfläche hinter dem First */
       s+=`<polygon points="${P([D2,C2,R2])}" fill="${shade(fc,.9)}"/>`;
       s+=`<polygon points="${P([B2,C2,R2,R1])}" fill="${shade(TILE,.85)}"/>`;
       s+=tileLines(B2,C2,R1,R2);
@@ -794,8 +796,16 @@ function hpUnit(x,y,lift){
   return s;
 }
 function hpUnits(b,h){
-  /* Kaskade auf dem Dach: 1–4 Außeneinheiten je nach Gebäudegröße, zweite Reihe versetzt dahinter */
+  /* Flachdach: Kaskade aus 1–4 Außeneinheiten auf dem Dach, zweite Reihe versetzt dahinter.
+     Schrägdach: dort passt keine hin – Geräte stehen am Boden vor der Fassade. */
   const n=clamp(Math.round(b.units/16),1,4);
+  let s="";
+  if(b.roofKind==="pitch"){
+    const y=b.gy+b.d-.30;
+    let x=b.gx+b.w-.67; /* rechtsbündig, lässt die Haustür in der Mitte frei */
+    for(let i=0;i<n&&x>=b.gx+.08;i++,x-=.66)s+=hpUnit(x,y,0);
+    return s;
+  }
   const xMax=b.gx+b.w-(b.roofKind==="tower"?.85:.12);
   const rows=[[],[]];
   let x=b.gx+.15,row=0;
@@ -807,7 +817,6 @@ function hpUnits(b,h){
     }
     rows[row].push(x);x+=.66;
   }
-  let s="";
   for(const xx of rows[1])s+=hpUnit(xx,b.gy+b.d-1.02,h); /* hintere Reihe zuerst zeichnen */
   for(const xx of rows[0])s+=hpUnit(xx,b.gy+b.d-.38,h);
   return s;
@@ -910,6 +919,10 @@ function applySave(d){
   S.jv=d.jv||null;
   d.b.forEach((o,i)=>{
     const b=S.buildings[i];if(!b)return;
+    /* Erst auf Grundzustand zurücksetzen: das Save speichert nur gesetzte Felder,
+       darf also nie auf einem abweichenden Default landen */
+    b.owner=null;b.status="frei";b.done=0;b.jv=false;b.hadKessel=false;
+    b.kesselJob=false;b.saniert=false;b.malus=false;b.stoer=false;b.compUntil=null;b.threat=null;
     for(const k of BSAVE)if(o[k]!==undefined)b[k]=o[k];
     b.comp=o.comp?COMPS.find(c=>c.id===o.comp)||null:null;
     if(o.threat){const c=COMPS.find(c=>c.id===o.threat.c);if(c)b.threat={comp:c,months:o.threat.m};}
