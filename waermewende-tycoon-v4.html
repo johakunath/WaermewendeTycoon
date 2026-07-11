@@ -407,6 +407,55 @@ const EVENTS=[
   {w:2,f:()=>{S.effects.push({k:"acq",d:.12,m:3});
     return "🗺️ Kommunale Wärmeplanung veröffentlicht! Eigentümer in heller Aufregung. Akquise 3 Monate leichter.";}},
 ];
+const DECISIONS=[
+  {e:"🏛️",title:"Anruf aus dem Rathaus",
+   text:"Der Bürgermeister plant das „Klimafest Kesselhausen“ und hätte gern einen Hauptsponsor. Er sagt „Win-win“. Er hat es von deinem Vertriebler.",
+   a:{l:"Sponsern (20.000 €)",can:()=>S.money>=20000,fx:()=>{S.money-=20000;S.rep=clamp(S.rep+10,0,100);
+      return "🎪 Klimafest gesponsert! Dein Logo auf 400 Bratwurst-Servietten. Ruf +10.";}},
+   b:{l:"Höflich ablehnen",fx:()=>{S.rep=clamp(S.rep-3,0,100);
+      return "Der Bürgermeister ist „nicht sauer, nur enttäuscht“. Ruf −3.";}}},
+  {e:"📺",title:"TV-Team im Heizkeller",
+   text:"„Galileo“ will eine Reportage drehen: „Die Wärmepumpen-Rebellen von Kesselhausen“. Live-Fernsehen. Detlef hat sich schon gekämmt.",
+   a:{l:"Kameras rein! (50/50)",fx:()=>{const good=Math.random()<.5;S.rep=clamp(S.rep+(good?10:-10),0,100);
+      return good?"📺 Die Reportage ist ein Hit! Detlef trendet regional. Ruf +10.":
+        "📺 Ausgerechnet heute tropft es im Keller. Deutschland sieht zu. Ruf −10.";}},
+   b:{l:"Lieber nicht",fx:()=>"Kein Fernsehen. Detlef kämmt sich trotzdem jetzt täglich."}},
+  {e:"👴",title:"Wärme & Söhne will verkaufen",
+   text:"Der Senior übergibt an den Junior, der Junior will „was mit Apps“ machen. Sie bieten dir ihre Bestandskunden an – Kessel inklusive.",
+   cond:()=>S.buildings.some(b=>b.status==="komp"&&b.comp.id==="ws"),
+   a:{l:"Portfolio kaufen (180.000 €)",can:()=>S.money>=180000,fx:()=>{
+      const bs=S.buildings.filter(b=>b.status==="komp"&&b.comp.id==="ws").slice(0,3);
+      S.money-=180000;
+      bs.forEach(b=>{b.owner="you";b.comp=null;b.status="kessel";b.hadKessel=true;});
+      return `🤝 ${bs.length} Gebäude übernommen! Der Junior macht jetzt eine Heizungs-App. Ohne Heizungen.`;}},
+   b:{l:"Kein Interesse",fx:()=>"Der Senior nickt langsam. Der Junior googelt „Startup Ideen“."}},
+  {e:"🎓",title:"Azubi-Programm",
+   text:"Die Handwerkskammer sucht Betriebe für eine Azubi-Offensive. Kostet Geld und Nerven – aber in 6 Monaten hättest du eine Monteurin mehr.",
+   a:{l:"Ausbilden (30.000 €)",can:()=>S.money>=30000,fx:()=>{S.money-=30000;
+      S.effects.push({k:"azubi",d:1,m:6});
+      return "🎓 Azubi-Programm gestartet! In 6 Monaten ist Verstärkung fertig. Bis dahin: viele Fragen.";}},
+   b:{l:"Kein Kopf dafür",fx:()=>"Die Handwerkskammer schickt einen enttäuschten Serienbrief."}},
+  {e:"🌪️",title:"Sturmnacht über Kesselhausen",
+   text:"Orkan „Detlef“ (kein Witz) hat Dächer abgedeckt. Die Stadt bittet alle Handwerker um Nothilfe – deine Monteure wären einen Monat blockiert.",
+   a:{l:"Helfen (1 Monat Umbaustopp)",fx:()=>{S.freeze=Math.max(S.freeze,1);S.rep=clamp(S.rep+8,0,100);
+      return "🌪️ Deine Trupps helfen der Stadt. Die Zeitung nennt euch „Helden in Arbeitshosen“. Ruf +8.";}},
+   b:{l:"Baustellen gehen vor",fx:()=>{S.rep=clamp(S.rep-4,0,100);
+      return "Die Nachbarschaft merkt sich das. Ruf −4.";}}},
+  {e:"🧇",title:"Messestand auf der „Wärme & Wohnen“",
+   text:"Die Regionalmesse hat noch einen Standplatz frei. Direkt neben dem Waffelstand – beste Lauflage.",
+   a:{l:"Stand buchen (25.000 €)",can:()=>S.money>=25000,fx:()=>{S.money-=25000;
+      S.effects.push({k:"acq",d:.10,m:3});
+      return "🧇 Messestand gebucht! 3 Monate leichtere Akquise. Und Waffelgeruch in allen Prospekten.";}},
+   b:{l:"Zu teuer",fx:()=>"Kein Messestand. ThermoKlaus nimmt ihn. Natürlich."}},
+  {e:"🤫",title:"Exklusiv-Deal vom Lieferanten",
+   text:"Dein Großhändler bietet einen Exklusivvertrag: dauerhaft günstigere Wärmepumpen. Der Haken: Die Presse nennt sowas gern „Klüngel“.",
+   cond:()=>S.buyDisc<.24,
+   a:{l:"Unterschreiben (40.000 €)",can:()=>S.money>=40000,fx:()=>{S.money-=40000;
+      S.buyDisc=Math.min(.24,S.buyDisc+.08);S.rep=clamp(S.rep-2,0,100);
+      return "🤫 Deal! CAPEX −8 %. Die Lokalzeitung schnuppert, findet aber nichts. Ruf −2.";}},
+   b:{l:"Sauber bleiben",fx:()=>{S.rep=clamp(S.rep+2,0,100);
+      return "Du bleibst sauber. Der Händler versteht das „geschäftlich nicht, menschlich schon“. Ruf +2.";}}},
+];
 
 /* ============ Balance ============ */
 const BAL={
@@ -934,7 +983,32 @@ function openSheet(id){
     <div class="quote">„${b.desc}“</div>${body}`;
   $("#sheetwrap").classList.add("on");
 }
-window.closeSheet=()=>$("#sheetwrap").classList.remove("on");
+window.closeSheet=()=>{if(_decision)return;$("#sheetwrap").classList.remove("on");};
+
+/* ============ Decision events ============ */
+let _decision=null,_decisionWasPaused=false;
+function openDecision(d){
+  _decision=d;
+  _decisionWasPaused=S.paused;S.paused=true;
+  $("#sheet").innerHTML=`<div class="grab"></div>
+    <h2>${d.e} ${d.title}</h2>
+    <div class="sub">Entscheidung – Kesselhausen wartet auf dich</div>
+    <div class="quote">${d.text}</div>
+    <button class="bigbtn" ${d.a.can&&!d.a.can()?"disabled":""} onclick="resolveDecision('a')">${d.a.l}</button>
+    <button class="bigbtn kessel" onclick="resolveDecision('b')">${d.b.l}</button>`;
+  $("#sheetwrap").classList.add("on");
+}
+window.resolveDecision=k=>{
+  if(!_decision)return;
+  const opt=_decision[k];
+  if(opt.can&&!opt.can())return;
+  const t=opt.fx();
+  _decision=null;
+  $("#sheetwrap").classList.remove("on");
+  S.paused=_decisionWasPaused;
+  if(t){toast(t,"event");news(t);}
+  render();
+};
 
 /* ============ Actions ============ */
 window.attempt=(id,mode)=>{
@@ -1025,6 +1099,10 @@ function convert(){
 }
 function doEvent(){
   if(Math.random()>BAL.eventProb)return;
+  if(Math.random()<.4){
+    const cands=DECISIONS.filter(d=>!d.cond||d.cond());
+    if(cands.length){openDecision(pick(cands));return;}
+  }
   for(let i=0;i<5;i++){
     const pool=[];EVENTS.forEach(e=>{for(let j=0;j<e.w;j++)pool.push(e);});
     const t=pick(pool).f();
@@ -1055,7 +1133,11 @@ function manageJV(){
 function tick(){
   if(S.paused||S.over)return;
   S.month++;
-  S.effects.forEach(e=>e.m--);S.effects=S.effects.filter(e=>e.m>0);
+  S.effects.forEach(e=>e.m--);
+  S.effects.filter(e=>e.k==="azubi"&&e.m<=0).forEach(()=>{S.installers++;
+    toast("🎓 Ausgelernt! Deine Azubine ist jetzt Monteurin. +1 Monteur.","win");
+    news("Azubi-Programm abgeschlossen: +1 Monteurin.");});
+  S.effects=S.effects.filter(e=>e.m>0);
   convert();
   const inc=S.buildings.reduce((a,b)=>{
     if(b.status==="aktiv")return a+rateOf(b);
