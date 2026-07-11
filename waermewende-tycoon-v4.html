@@ -33,6 +33,8 @@ header .title{font-family:'Baloo 2';font-weight:800;font-size:14px;line-height:1
 .thermo .lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-family:'Baloo 2';font-weight:800;font-size:11px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4);}
 .thermo .ends{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;padding:0 5px;font-size:11px;}
+.thermo .goal{color:#b8c4d0;font-size:10.5px;font-weight:800;text-align:center;padding-top:3px;}
+.thermo .goal.late{color:#FF9B72;}
 
 /* ---------- Stat chips ---------- */
 .stats{display:flex;gap:5px;overflow-x:auto;padding:5px 8px;scrollbar-width:none;background:var(--sky);flex:0 0 auto;}
@@ -177,6 +179,7 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
   .thermo .bar{height:24px;border-radius:12px;}
   .thermo .lbl{font-size:15px;}
   .thermo .ends{font-size:16px;padding:0 9px;}
+  .thermo .goal{font-size:13px;padding-top:5px;}
   .stats{gap:9px;padding:9px 18px;justify-content:center;flex-wrap:wrap;overflow-x:visible;}
   .chip{font-size:14px;padding:6px 13px;border-radius:12px;cursor:default;}
   .chip b{font-size:15px;}
@@ -241,6 +244,7 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
     <div class="ends"><span>🔥</span><span>🌱</span></div>
     <div class="lbl" id="shareLbl">Dekarbonisiert 0 %</div>
   </div>
+  <div class="goal" id="goalLine"></div>
 </div>
 
 <div class="stats" id="stats"></div>
@@ -281,7 +285,8 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
       <li>🏢 <b>Tippe auf ein Gebäude:</b> Wärmepumpen-Contracting (teuer, volle Rate) oder günstiger <b>Kesseltausch</b> – sichert dir den Kunden, dekarbonisiert aber nicht. Braucht auch Monteure (⅓ der Zeit). Später upgraden!</li>
       <li>🏚️ <b>Jeder Gebäudetyp tickt anders:</b> Altbau will erst saniert werden, Villen haben Denkmalschutz, Plattenbau gibt's im Mengenrabatt.</li>
       <li>👷 <b>Bau deine Firma aus:</b> Monteure (Umbau-Tempo), Vertriebler (Abschlussquote), Prioritäten, F&E, Einkauf.</li>
-      <li>😏 <b>Konkurrenz schnappt sich freie Gebäude.</b> Abwerben geht – deine Kunden sind dagegen sicher.</li>
+      <li>😏 <b>Konkurrenz schnappt sich freie Gebäude</b> – und umgarnt später deine Kessel-Kunden! Nur Wärmepumpen-Kunden sind sicher. Dafür laufen Konkurrenz-Verträge auch mal aus.</li>
+      <li>🎯 <b>Stadtziele:</b> 30 % bis Ende 2032, 60 % bis Ende 2038 – schaffst du sie, gibt's Extra-Förderung. Sonst nicht.</li>
       <li>🤝 <b>Ab 25 % Kundenanteil: Joint Ventures.</b> Ganze Gebäudepakete auf einen Schlag – der Partner kassiert mit.</li>
       <li>🏆 <b>Ziel: 100 % dekarbonisiert</b> (Thermometer oben). Pleite = Insolvenz in Eigenverwaltung (klingt besser, ist es nicht).</li>
     </ul>
@@ -492,9 +497,11 @@ const S={
   installers:2, sellers:0, loans:0, buyDisc:0, freeze:0, prio:"mix", rnd:false,
   effects:[], news:[], speed:1, paused:true, over:false, started:false,
   buildings:[], deco:[], jv:null, jvUnlocked:false, milestones:new Set(),
-  citySeed:0, diff:"meister",
+  citySeed:0, diff:"meister", goalIdx:0,
   lastPL:{inc:0,sal:0,int:0},
 };
+const GOALS=[{m:84,pct:30},{m:156,pct:60}];
+const goalYear=g=>2025+g.m/12;
 const subBase=.30;
 const effSub=()=>clamp(subBase+S.effects.filter(e=>e.k==="sub").reduce((a,e)=>a+e.d,0),0,.55);
 const acqBonus=()=>S.effects.filter(e=>e.k==="acq").reduce((a,e)=>a+e.d,0);
@@ -789,6 +796,7 @@ function drawBuilding(b){
     s+=`<g class="puff" transform="translate(${cx},${by2})"><circle cx="-3" cy="1.5" r="3.2" fill="#BFC8D0" opacity=".85"/><circle cx="2.6" cy="0" r="3.8" fill="#CDD5DB" opacity=".9"/><circle cx="0" cy="-3" r="2.8" fill="#DCE2E7" opacity=".9"/></g>`;
   }else if(b.status==="kessel"){
     s+=`<g transform="translate(${cx},${by2})"><path d="M0,5 C-3,2.4 -2.4,-1.6 0,-6 C2,-2 3.6,1 1.8,3.6 C2.6,1.8 1.6,0 0.4,-1 C1,1.2 -1,3.2 0,5Z" fill="#E8A33D" stroke="#B87E22" stroke-width=".5"/></g>`;
+    if(b.threat)s+=`<text x="${cx+13}" y="${by2+4}" text-anchor="middle" font-size="11">⚠️</text>`;
   }else if(b.status==="komp"){
     s+=`<text x="${cx}" y="${by2}" text-anchor="middle" font-size="13">${b.comp.emoji}</text>`;
   }else if(b.status==="aktiv"){
@@ -828,7 +836,7 @@ const BSAVE=["owner","status","done","jv","hadKessel","kesselJob","saniert","mal
 const traitTag=b=>{const tr=TRAITS[b.t];if(!tr)return "";
   return b.t==="altbau"&&(b.saniert||hasTech("propan"))?"🧱 saniert":tr.tag;};
 const SSAVE=["money","month","rep","co2","energy","installers","sellers","loans","buyDisc",
-  "freeze","prio","rnd","effects","news","jvUnlocked","citySeed","diff","lastPL"];
+  "freeze","prio","rnd","effects","news","jvUnlocked","citySeed","diff","goalIdx","lastPL"];
 function saveGame(){
   if(!S.started||S.over)return;
   const d={v:5,s:{},jv:S.jv,ms:[...S.milestones],dec:Math.round(decarbShare()*100),
@@ -868,6 +876,16 @@ function render(){
   const sh=Math.round(decarbShare()*100);
   $("#shareFill").style.width=sh+"%";
   $("#shareLbl").textContent="Dekarbonisiert "+sh+" %";
+  const _g=GOALS[S.goalIdx];
+  const _gl=$("#goalLine");
+  if(_g){
+    const left=_g.m-S.month;
+    _gl.textContent=`🎯 Stadtziel: ${_g.pct} % bis Ende ${goalYear(_g)} (noch ${Math.max(0,left)} Mon.)`;
+    _gl.classList.toggle("late",left<=12&&sh<_g.pct);
+  }else{
+    _gl.textContent="🎯 Alle Stadtziele erledigt – jetzt die 100 % holen!";
+    _gl.classList.remove("late");
+  }
   const queue=S.buildings.filter(b=>b.status==="umbau").reduce((a,b)=>a+(b.units-b.done),0);
   $("#stats").innerHTML=
     chip("💰",fmt(S.money),S.money<0?"bad":"",`Kontostand – bei unter ${fmt(dv("brokeAt"))} ist Schluss`)+
@@ -993,6 +1011,7 @@ function openSheet(id){
       <tr><td>Rate nach Upgrade</td><td>~${fmt(rateOf(b))}${alt?" (unsan. −20 %)":""}/Mon.</td></tr>
       <tr><td>Upgrade (CAPEX −15 % + Kundenpflege)</td><td>${fmt(cost)}</td></tr>
       ${alt?`<tr><td>🧱 Upgrade mit Sanierung</td><td>${fmt(cost+sanC)}</td></tr>`:""}</table>
+      ${b.threat?`<p style="font-size:13px;margin:0 0 8px;color:#C0392B;font-weight:800">⚠️ ${b.threat.comp.emoji} ${b.threat.comp.name} umgarnt diesen Kunden – noch ${b.threat.months} Mon.! Ein Upgrade hält ihn.</p>`:""}
       <p style="font-size:13px;margin:0 0 8px">♨️ Dein Kunde, dein Kessel – aber dekarbonisiert ist hier noch nichts. Zuschlag garantiert. Der Kessel läuft weiter, bis die Wärmepumpe steht.</p>
       <button class="bigbtn upg" ${S.money<cost?"disabled":""} onclick="attempt(${b.id},'upgrade')">
         ${S.money<cost?"Zu wenig Geld 💸":"Upgrade auf Wärmepumpe 🔁"+(alt?" (unsaniert)":"")}</button>
@@ -1112,15 +1131,67 @@ window.repay=()=>{const cost=BAL.loanAmt*1.1;if(S.loans<1||S.money<cost)return;S
 function competitorsAct(){
   if(S.month<BAL.compStart)return;
   const free=S.buildings.filter(b=>b.status==="frei");
-  if(!free.length)return;
   COMPS.forEach(c=>{
     if(Math.random()<c.agg*BAL.compProb*dv("comp")&&free.length){
       const b=free.splice(Math.floor(Math.random()*free.length),1)[0];
       b.owner=c.id;b.comp=c;b.status="komp";
+      b.compUntil=S.month+ri(24,36);
       news(`${c.emoji} ${c.name} schnappt sich ${b.name}. Mit Gas-Contracting. GAS!`);
       if(Math.random()<.5)toast(`${c.emoji} ${c.name} schnappt sich ${b.name}!`,"bad");
     }
+    /* Ab Monat 24 umgarnt die Konkurrenz deine Kessel-Kunden (WP-Kunden sind sicher) */
+    if(S.month>=24&&Math.random()<c.agg*.06*dv("comp")){
+      const targets=S.buildings.filter(b=>b.status==="kessel"&&!b.threat);
+      if(targets.length){
+        const b=pick(targets);
+        b.threat={comp:c,months:2};
+        toast(`⚠️ ${c.emoji} ${c.name} umgarnt deinen Kunden ${b.name}! Upgrade in 2 Monaten – oder er ist weg.`,"bad");
+        news(`${c.emoji} ${c.name} macht ${b.name} schöne Augen. Zeit für ein Upgrade!`);
+      }
+    }
   });
+}
+function threats(){
+  for(const b of S.buildings){
+    if(!b.threat)continue;
+    if(b.status!=="kessel"){b.threat=null;continue;}
+    b.threat.months--;
+    if(b.threat.months<=0){
+      const c=b.threat.comp;
+      b.threat=null;b.owner=c.id;b.comp=c;b.status="komp";b.kesselJob=false;
+      b.compUntil=S.month+ri(24,36);
+      S.rep=clamp(S.rep-3,0,100);
+      toast(`😤 ${c.emoji} ${c.name} schnappt dir ${b.name} weg! Ruf −3.`,"bad");
+      news(`Kunde verloren: ${b.name} wechselt zu ${c.name}.`);
+    }
+  }
+}
+function compExpiry(){
+  for(const b of S.buildings){
+    if(b.status==="komp"&&b.compUntil&&S.month>=b.compUntil){
+      news(`📄 Vertrag ausgelaufen: ${b.name} ist wieder frei. ${b.comp.name} hat nie zurückgerufen.`);
+      if(Math.random()<.4)toast(`📄 ${b.name}: Vertrag bei ${b.comp.name} ausgelaufen – wieder frei!`,"event");
+      b.owner=null;b.comp=null;b.status="frei";b.compUntil=null;
+    }
+  }
+}
+function checkGoals(){
+  if(S.goalIdx>=GOALS.length)return;
+  const g=GOALS[S.goalIdx],pct=decarbShare()*100;
+  if(pct>=g.pct){
+    S.goalIdx++;
+    S.rep=clamp(S.rep+5,0,100);
+    S.effects.push({k:"sub",d:.05,m:12});
+    toast(`🎯 Stadtziel geschafft: ${g.pct} % vor Ende ${goalYear(g)}! Förderung +5 pp für 12 Monate, Ruf +5.`,"win");
+    news(`Klimaziel erreicht: ${g.pct} % Dekarbonisierung – früher als geplant.`);
+    confetti(14);
+  }else if(S.month>=g.m){
+    S.goalIdx++;
+    S.rep=clamp(S.rep-5,0,100);
+    S.effects.push({k:"sub",d:-.05,m:12});
+    toast(`🎯 Stadtziel verfehlt (${g.pct} % bis Ende ${goalYear(g)}). Förderung −5 pp für 12 Monate, Ruf −5.`,"bad");
+    news(`Klimaziel verfehlt: nur ${Math.round(pct)} % statt ${g.pct} %. ${pick(COMPS).name} spottet in der Zeitung.`);
+  }
 }
 function convert(){
   if(S.freeze>0){S.freeze--;return;}
@@ -1200,6 +1271,9 @@ function tick(){
   S.money+=inc-sal-int;S.lastPL={inc,sal,int};
   S.energy=clamp(S.energy*(0.985+Math.random()*0.03),.7,1.9);
   competitorsAct();
+  threats();
+  compExpiry();
+  checkGoals();
   doEvent();
   manageJV();
   const _sh=Math.floor(decarbShare()*100);
