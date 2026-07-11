@@ -284,7 +284,7 @@ nav button .pip{position:absolute;top:2px;right:20%;width:9px;height:9px;border-
     <ul>
       <li>🏢 <b>Tippe auf ein Gebäude:</b> Wärmepumpen-Contracting (teuer, volle Rate) oder günstiger <b>Kesseltausch</b> – sichert dir den Kunden, dekarbonisiert aber nicht. Braucht auch Monteure (⅓ der Zeit). Später upgraden!</li>
       <li>🏚️ <b>Jeder Gebäudetyp tickt anders:</b> Altbau will erst saniert werden, Villen haben Denkmalschutz, Plattenbau gibt's im Mengenrabatt.</li>
-      <li>👷 <b>Bau deine Firma aus:</b> Monteure (Umbau-Tempo), Vertriebler (Abschlussquote), Prioritäten, F&E, Einkauf.</li>
+      <li>👷 <b>Bau deine Firma aus:</b> Monteure (Umbau-Tempo – und Reparaturen bei ❄️ Störungen!), Vertriebler (Abschlussquote), Prioritäten, F&E, Einkauf.</li>
       <li>😏 <b>Konkurrenz schnappt sich freie Gebäude</b> – und umgarnt später deine Kessel-Kunden! Nur Wärmepumpen-Kunden sind sicher. Dafür laufen Konkurrenz-Verträge auch mal aus.</li>
       <li>🎯 <b>Stadtziele:</b> 30 % bis Ende 2032, 60 % bis Ende 2038 – schaffst du sie, gibt's Extra-Förderung. Sonst nicht.</li>
       <li>🤝 <b>Ab 25 % Kundenanteil: Joint Ventures.</b> Ganze Gebäudepakete auf einen Schlag – der Partner kassiert mit.</li>
@@ -766,7 +766,7 @@ function scaffold(b,h){
 function drawBuilding(b){
   const h=b.floors*FLPX,m=.18;
   const pA=iso(b.gx-m,b.gy-m),pB=iso(b.gx+b.w+m,b.gy-m),pC=iso(b.gx+b.w+m,b.gy+b.d+m),pD=iso(b.gx-m,b.gy+b.d+m);
-  const stLbl=b.status==="aktiv"?"🌱 Wärmepumpe läuft":
+  const stLbl=b.status==="aktiv"?(b.stoer?"❄️ Störung – Monteure unterwegs":"🌱 Wärmepumpe läuft"):
     b.status==="umbau"?(b.kesselJob?`♨️ Kesseltausch läuft (${b.done}/${b.units} WE)`:`🏗️ im Umbau (${b.done}/${b.units} WE)`):
     b.status==="kessel"?"♨️ dein Kesseltausch-Kunde – Upgrade offen":
     b.status==="komp"?`${b.comp.emoji} bei ${b.comp.name}`:
@@ -799,6 +799,8 @@ function drawBuilding(b){
     if(b.threat)s+=`<text x="${cx+13}" y="${by2+4}" text-anchor="middle" font-size="11">⚠️</text>`;
   }else if(b.status==="komp"){
     s+=`<text x="${cx}" y="${by2}" text-anchor="middle" font-size="13">${b.comp.emoji}</text>`;
+  }else if(b.status==="aktiv"&&b.stoer){
+    s+=`<text x="${cx}" y="${by2+5}" text-anchor="middle" font-size="13">❄️</text>`;
   }else if(b.status==="aktiv"){
     s+=`<g class="sprout" transform="translate(${cx},${by2})"><path d="M0,5 L0,-0.8" stroke="#2F7D1F" stroke-width="1.3" stroke-linecap="round"/><path d="M0,-0.8 C-4,-0.8 -5,-4.8 -5,-4.8 C-5,-4.8 -1,-4.2 0,-0.8Z" fill="#4CAF50"/><path d="M0,0.2 C4,0.2 5,-3.6 5,-3.6 C5,-3.6 1,-3.2 0,0.2Z" fill="#5FC15A"/></g>`;
   }else if(b.status==="umbau"){
@@ -1022,10 +1024,11 @@ function openSheet(id){
       ${b.hadKessel?`<tr><td>Übergangsrate (Kessel läuft noch)</td><td>~${fmt(kRate(b))}/Mon.</td></tr>`:""}</table>
       <p style="font-size:13px">${b.kesselJob?"♨️ Kesseltausch läuft – flotter Job, ein Drittel der Umbauzeit. Danach ist der Kunde deiner.":"🚧 Deine Monteure sind dran. Es klopft, es bohrt, Detlef schaut zu und nickt fachmännisch."}</p>`;
   }else if(b.status==="aktiv"){
-    body=facts+`<tr><td>Einnahmen</td><td>~${fmt(rateOf(b))}/Mon.</td></tr>
+    body=facts+`<tr><td>Einnahmen</td><td>${b.stoer?"0 € (Störung!)":"~"+fmt(rateOf(b))+"/Mon."}</td></tr>
       ${b.jv?`<tr><td>Joint Venture</td><td>Partner behält ${Math.round(BAL.jvCut*100)} %</td></tr>`:""}
       <tr><td>CO₂-Einsparung</td><td>${Math.round(b.units*2.1)} t/a</td></tr></table>
-      <p style="font-size:13px">🌱 Läuft! Der Heizkeller ist jetzt so leise, dass man die Mieter streiten hört.</p>`;
+      ${b.stoer?`<p style="font-size:13px;color:#C0392B;font-weight:800">❄️ Störung! Die Rate pausiert und der Ruf leidet, bis ein Monteur repariert hat (bindet 5 WE Kapazität).</p>`:
+      `<p style="font-size:13px">🌱 Läuft! Der Heizkeller ist jetzt so leise, dass man die Mieter streiten hört.</p>`}`;
   }
   $("#sheet").innerHTML=`<div class="grab"></div>
     <h2>${TYPES[b.t].e} ${b.name}</h2>
@@ -1193,9 +1196,26 @@ function checkGoals(){
     news(`Klimaziel verfehlt: nur ${Math.round(pct)} % statt ${g.pct} %. ${pick(COMPS).name} spottet in der Zeitung.`);
   }
 }
+function stoerungen(){
+  for(const b of S.buildings){
+    if(b.status!=="aktiv"||b.stoer)continue;
+    if(Math.random()<.008*dv("stoer")){
+      b.stoer=true;
+      toast(`❄️ Störung in der ${b.name}! Wärmepumpe steht, Mieter frösteln. Monteure fahren hin.`,"bad");
+      news(`Störung: ${b.name}. Rate pausiert, bis repariert ist.`);
+    }
+  }
+}
 function convert(){
   if(S.freeze>0){S.freeze--;return;}
   let cap=Math.round(S.installers*BAL.convWE*PRIOS[S.prio].conv);
+  /* Reparaturen zuerst: jede Störung bindet 5 WE Kapazität */
+  for(const b of S.buildings.filter(b=>b.stoer&&b.status==="aktiv")){
+    if(cap<5)break;
+    cap-=5;b.stoer=false;
+    news(`🔧 Störung behoben: ${b.name}. Die Wärmepumpe brummt wieder.`);
+    if(Math.random()<.5)toast(`🔧 Störung behoben: ${b.name}.`,"win");
+  }
   for(const b of S.buildings.filter(b=>b.status==="umbau")){
     if(cap<=0)break;
     if(b.kesselJob){
@@ -1262,8 +1282,9 @@ function tick(){
     news("Azubi-Programm abgeschlossen: +1 Monteurin.");});
   S.effects=S.effects.filter(e=>e.m>0);
   convert();
+  S.buildings.filter(b=>b.stoer&&b.status==="aktiv").forEach(()=>{S.rep=clamp(S.rep-1,0,100);});
   const inc=S.buildings.reduce((a,b)=>{
-    if(b.status==="aktiv")return a+rateOf(b);
+    if(b.status==="aktiv")return a+(b.stoer?0:rateOf(b));
     if(b.status==="kessel")return a+kRate(b);
     if(b.status==="umbau"&&b.hadKessel)return a+kRate(b);
     return a;},0);
@@ -1274,6 +1295,7 @@ function tick(){
   threats();
   compExpiry();
   checkGoals();
+  stoerungen();
   doEvent();
   manageJV();
   const _sh=Math.floor(decarbShare()*100);
