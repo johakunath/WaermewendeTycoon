@@ -485,6 +485,13 @@ const DIFF={
   sanierungsfall:{l:"🔥 Sanierungsfall",startMoney:380000,comp:1.3,stoer:1.4,brokeAt:-100000,scoreM:1.3},
 };
 const dv=k=>DIFF[S.diff][k];
+const TECHS={
+  wumme:{e:"🔬",l:"WärmeWumme 3000",cost:120000,mo:6,d:"Eigene Baureihe: alle WP-Raten dauerhaft +12 %"},
+  propan:{e:"🧪",l:"Propan-Kompakt",cost:80000,mo:5,d:"Altbau braucht keine Sanierung mehr – Malus entfällt, auch rückwirkend"},
+  fluester:{e:"🤫",l:"Flüsterkondensator",cost:60000,mo:4,d:"Denkmalschutz-Villen: volle Umbaugeschwindigkeit"},
+  akademie:{e:"🎓",l:"Monteur-Akademie",cost:70000,mo:4,d:"+2 WE Umbau pro Monteur und Monat"},
+  smartgrid:{e:"⚡",l:"Smart-Grid-Paket",cost:90000,mo:5,d:"+8 % Rate, solange der Energiepreis-Faktor über 1,15 liegt"},
+};
 const PRIOS={
   vertrieb:{e:"📞",l:"Vertrieb",chance:+.10,conv:.75,d:"+10 % Abschluss<br>−25 % Umbau"},
   mix:{e:"⚖️",l:"Ausgewogen",chance:0,conv:1,d:"solide<br>unaufgeregt"},
@@ -497,7 +504,7 @@ const S={
   installers:2, sellers:0, loans:0, buyDisc:0, freeze:0, prio:"mix", rnd:false,
   effects:[], news:[], speed:1, paused:true, over:false, started:false,
   buildings:[], deco:[], jv:null, jvUnlocked:false, milestones:new Set(),
-  citySeed:0, diff:"meister", goalIdx:0,
+  citySeed:0, diff:"meister", goalIdx:0, research:null, tech:new Set(),
   lastPL:{inc:0,sal:0,int:0},
 };
 const GOALS=[{m:84,pct:30},{m:156,pct:60}];
@@ -513,7 +520,7 @@ const poachFeeOf=b=>b.units*BAL.poachFeeWE;
 const upgCost=b=>capexOf(b)*BAL.upgFactor+pitchOf(b)*.5;
 const instSalary=()=>Math.round(S.installers*BAL.salary*(1+Math.max(0,S.installers-4)*.05));
 const rateOf=b=>b.units*BAL.rateWE*S.energy*(b.jv?1-BAL.jvCut:1)*(S.rnd?1+BAL.rndBoost:1)
-  *(b.malus&&!hasTech("propan")?.8:1);
+  *(b.malus&&!hasTech("propan")?.8:1)*(hasTech("smartgrid")&&S.energy>1.15?1.08:1);
 const kRate=b=>b.units*BAL.kesselRateWE*S.energy*(b.jv?1-BAL.jvCut:1);
 const chanceOf=(b,poach,skipAltbau)=>{
   const tr=TRAITS[b.t];
@@ -838,10 +845,10 @@ const BSAVE=["owner","status","done","jv","hadKessel","kesselJob","saniert","mal
 const traitTag=b=>{const tr=TRAITS[b.t];if(!tr)return "";
   return b.t==="altbau"&&(b.saniert||hasTech("propan"))?"🧱 saniert":tr.tag;};
 const SSAVE=["money","month","rep","co2","energy","installers","sellers","loans","buyDisc",
-  "freeze","prio","rnd","effects","news","jvUnlocked","citySeed","diff","goalIdx","lastPL"];
+  "freeze","prio","rnd","effects","news","jvUnlocked","citySeed","diff","goalIdx","research","lastPL"];
 function saveGame(){
   if(!S.started||S.over)return;
-  const d={v:5,s:{},jv:S.jv,ms:[...S.milestones],dec:Math.round(decarbShare()*100),
+  const d={v:5,s:{},jv:S.jv,ms:[...S.milestones],tech:[...S.tech],dec:Math.round(decarbShare()*100),
     b:S.buildings.map(b=>{
       const o={};
       for(const k of BSAVE)if(b[k]!==undefined&&b[k]!==null&&b[k]!==false)o[k]=b[k];
@@ -863,6 +870,7 @@ function readSave(){
 function applySave(d){
   for(const k of SSAVE)if(d.s[k]!==undefined)S[k]=d.s[k];
   S.milestones=new Set(d.ms||[]);
+  S.tech=new Set(d.tech||[]);
   S.jv=d.jv||null;
   d.b.forEach((o,i)=>{
     const b=S.buildings[i];if(!b)return;
@@ -942,9 +950,17 @@ function renderTeam(){
   <div class="card"><div class="row"><div>
     <h3>💼 Vertriebler einstellen</h3><p>+4 % Abschlusschance. ${fmt(BAL.salarySeller)}/Monat. Bringt eigene Anekdoten mit. (${S.sellers}/${BAL.maxSellers})</p></div>
     <button class="buy" onclick="hireSeller()" title="Einmalig 8.000 € + ${fmt(BAL.salarySeller)}/Monat. +4 % Abschlusschance." ${S.money<8000||S.sellers>=BAL.maxSellers?"disabled":""}>8.000 €</button></div></div>
-  <div class="card"><div class="row"><div>
-    <h3>🔬 F&E: „WärmeWumme 3000“</h3><p>Eigene Wärmepumpen-Baureihe: Rate dauerhaft +${Math.round(BAL.rndBoost*100)} %. ${S.rnd?"✅ Läuft. Sie brummt beruhigend.":"Einmalige Investition."}</p></div>
-    <button class="buy" onclick="doRnd()" title="Einmalig ${fmt(BAL.rndCost)}. Alle Wärmepumpen-Raten dauerhaft +${Math.round(BAL.rndBoost*100)} %." ${S.rnd||S.money<BAL.rndCost?"disabled":""}>${S.rnd?"Aktiv":fmt(BAL.rndCost)}</button></div></div>
+  <div class="card"><h3>🔬 Forschung & Entwicklung</h3>
+    ${S.research?`<p>Läuft: <b>${TECHS[S.research.id].e} ${TECHS[S.research.id].l}</b> – noch ${S.research.left} Mon. Das Labor riecht nach Zukunft.</p>`:
+      `<p>Ein Projekt gleichzeitig. Wähle weise – oder nach Bauchgefühl, wie Detlef.</p>`}
+    ${Object.entries(TECHS).map(([id,t])=>{
+      const done=S.tech.has(id)||(id==="wumme"&&S.rnd);
+      const active=S.research&&S.research.id===id;
+      return `<div class="row" style="margin-bottom:8px"><div style="flex:1">
+        <b>${t.e} ${t.l}</b><br><span style="font-size:12px;font-weight:700;opacity:.8">${t.d} · ${t.mo} Mon.</span></div>
+        <button class="buy" onclick="research('${id}')" title="${esc(t.d)} – dauert ${t.mo} Monate." ${done||active||S.research||S.money<t.cost?"disabled":""}>${done?"✅":active?S.research.left+" Mon.":fmt(t.cost)}</button></div>`;
+    }).join("")}
+  </div>
   <div class="card"><div class="row"><div>
     <h3>📣 Marketing-Kampagne</h3><p>Plakat: „Detlef vertraut uns.“ Ruf +8.</p></div>
     <button class="buy" onclick="mkt()" title="Einmalig 20.000 €. Ruf +8." ${S.money<20000?"disabled":""}>20.000 €</button></div></div>
@@ -1123,7 +1139,13 @@ window.setPrio=k=>{S.prio=k;
         "⚖️ Zurück zur gesunden Mitte. Detlef nickt.","event");render();};
 window.hire=()=>{S.money-=12000;S.installers++;toast("👷 Neuer Monteur an Bord. Er hat eigenes Werkzeug. Ein gutes Zeichen.","win");render();};
 window.hireSeller=()=>{S.money-=8000;S.sellers++;toast("💼 Neuer Vertriebler! Er sagt „Win-win“. Zweimal pro Satz.","win");render();};
-window.doRnd=()=>{S.money-=BAL.rndCost;S.rnd=true;toast("🔬 Die WärmeWumme 3000 ist da! Sie brummt beruhigend. Rate +12 %.","win");render();};
+window.research=id=>{
+  const t=TECHS[id];
+  if(!t||S.research||S.tech.has(id)||(id==="wumme"&&S.rnd)||S.money<t.cost)return;
+  S.money-=t.cost;S.research={id,left:t.mo};
+  toast(`🔬 Forschung gestartet: ${t.l}. Ergebnis in ${t.mo} Monaten.`,"event");
+  news(`F&E gestartet: ${t.l}.`);render();
+};
 window.mkt=()=>{S.money-=20000;S.rep=clamp(S.rep+8,0,100);toast("📣 Kampagne läuft. Detlef ist jetzt lokal berühmt.","win");render();};
 window.bulk=()=>{S.money-=50000;S.buyDisc=Math.min(.24,S.buyDisc+.08);toast("📦 Rahmenvertrag unterschrieben. Der Lieferant schickt Kalender.","win");render();};
 window.loan=()=>{if(S.loans>=3)return;S.money+=BAL.loanAmt;S.loans++;toast("🏦 Kredit da. Die Bank ruft jetzt öfter an. „Nur um zu plaudern.“","event");render();};
@@ -1208,7 +1230,7 @@ function stoerungen(){
 }
 function convert(){
   if(S.freeze>0){S.freeze--;return;}
-  let cap=Math.round(S.installers*BAL.convWE*PRIOS[S.prio].conv);
+  let cap=Math.round(S.installers*(BAL.convWE+(hasTech("akademie")?2:0))*PRIOS[S.prio].conv);
   /* Reparaturen zuerst: jede Störung bindet 5 WE Kapazität */
   for(const b of S.buildings.filter(b=>b.stoer&&b.status==="aktiv")){
     if(cap<5)break;
@@ -1281,6 +1303,17 @@ function tick(){
     toast("🎓 Ausgelernt! Deine Azubine ist jetzt Monteurin. +1 Monteur.","win");
     news("Azubi-Programm abgeschlossen: +1 Monteurin.");});
   S.effects=S.effects.filter(e=>e.m>0);
+  if(S.research){
+    S.research.left--;
+    if(S.research.left<=0){
+      const t=TECHS[S.research.id];
+      S.tech.add(S.research.id);
+      if(S.research.id==="wumme")S.rnd=true;
+      S.research=null;
+      toast(`🔬 Forschung fertig: ${t.l}! ${t.d}.`,"win");
+      news(`F&E abgeschlossen: ${t.l}.`);
+    }
+  }
   convert();
   S.buildings.filter(b=>b.stoer&&b.status==="aktiv").forEach(()=>{S.rep=clamp(S.rep-1,0,100);});
   const inc=S.buildings.reduce((a,b)=>{
