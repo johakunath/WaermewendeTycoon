@@ -654,7 +654,7 @@ function buildGround(){
 const FACADES=["#E9DCC0","#E5C88F","#E3B7A6","#CFD9BB","#C9D4DC","#F0E6D2","#DFC9A8"];
 const TILE="#C4634E";
 function statusColor(b){
-  if(b.status==="aktiv")return "#4CAF50";
+  if(b.status==="aktiv")return "#00A98F"; /* Türkis statt Grün – hebt sich vom Gras ab */
   if(b.status==="umbau")return "#4A90E2";
   if(b.status==="kessel")return "#E8A33D";
   if(b.status==="komp")return b.comp.color;
@@ -773,6 +773,45 @@ function scaffold(b,h){
   face(iso(b.gx,b.gy+b.d),TW/2,TH/2,b.w);
   return `<path d="${d}" fill="none" stroke="#B08D57" stroke-width="1" opacity=".85"/>`;
 }
+function hpUnit(x,y,lift){
+  /* Wärmepumpen-Außeneinheit: Kasten mit Sockel, Lüftergitter vorn, Lamellen seitlich */
+  const w=.52,d=.30,hh=7;
+  let s=prism(x,y,w,d,lift,hh,"#eef2f5","#e4eaef","#c3ccd4");
+  const D=iso(x,y+d),C=iso(x+w,y+d);
+  s+=`<line x1="${r1(D.X)}" y1="${r1(D.Y-lift-.7)}" x2="${r1(C.X)}" y2="${r1(C.Y-lift-.7)}" stroke="#8b98a3" stroke-width="1.1"/>`;
+  const c=iso(x+w/2,y+d);
+  const cx=c.X,cy=c.Y-lift-hh*.55;
+  s+=`<circle cx="${r1(cx)}" cy="${r1(cy)}" r="2.7" fill="#f7fafc" stroke="#6f7d89" stroke-width=".8"/>`;
+  s+=`<circle cx="${r1(cx)}" cy="${r1(cy)}" r="1.85" fill="none" stroke="#aab5bd" stroke-width=".5"/>`;
+  for(const a of[.6,2.7,4.8]){
+    s+=`<line x1="${r1(cx)}" y1="${r1(cy)}" x2="${r1(cx+Math.cos(a)*2.2)}" y2="${r1(cy+Math.sin(a)*2.2)}" stroke="#8b98a3" stroke-width=".7"/>`;
+  }
+  s+=`<circle cx="${r1(cx)}" cy="${r1(cy)}" r=".65" fill="#5d6a75"/>`;
+  const s0=iso(x+w,y+d*.15),s1=iso(x+w,y+d*.85);
+  for(const z of[lift+2.4,lift+4,lift+5.6]){
+    s+=`<line x1="${r1(s0.X)}" y1="${r1(s0.Y-z)}" x2="${r1(s1.X)}" y2="${r1(s1.Y-z)}" stroke="#b6c0c8" stroke-width=".7"/>`;
+  }
+  return s;
+}
+function hpUnits(b,h){
+  /* Kaskade auf dem Dach: 1–4 Außeneinheiten je nach Gebäudegröße, zweite Reihe versetzt dahinter */
+  const n=clamp(Math.round(b.units/16),1,4);
+  const xMax=b.gx+b.w-(b.roofKind==="tower"?.85:.12);
+  const rows=[[],[]];
+  let x=b.gx+.15,row=0;
+  for(let i=0;i<n;i++){
+    if(x+.52>xMax){
+      if(row===1||b.d<1.8)break;
+      row=1;x=b.gx+.45;
+      if(x+.52>xMax)break;
+    }
+    rows[row].push(x);x+=.66;
+  }
+  let s="";
+  for(const xx of rows[1])s+=hpUnit(xx,b.gy+b.d-1.02,h); /* hintere Reihe zuerst zeichnen */
+  for(const xx of rows[0])s+=hpUnit(xx,b.gy+b.d-.38,h);
+  return s;
+}
 function drawBuilding(b){
   const h=b.floors*FLPX,m=.18;
   const pA=iso(b.gx-m,b.gy-m),pB=iso(b.gx+b.w+m,b.gy-m),pC=iso(b.gx+b.w+m,b.gy+b.d+m),pD=iso(b.gx-m,b.gy+b.d+m);
@@ -790,13 +829,7 @@ function drawBuilding(b){
     s+=`<line x1="${r1(ax)}" y1="${r1(ay)}" x2="${r1(ax)}" y2="${r1(ay-13)}" stroke="#4a4a4a" stroke-width="1.2"/>`+
        `<polygon points="${r1(ax)},${r1(ay-13)} ${r1(ax+10)},${r1(ay-10)} ${r1(ax)},${r1(ay-7)}" fill="${b.comp.color}"/>`;
   }
-  if(b.status==="aktiv"){
-    const ux=b.gx+b.w-.8,uy=b.gy+b.d+.05;
-    s+=prism(ux,uy,.55,.32,0,5.5,"#f4f7f9","#e9eef2","#cfd6dd");
-    const f1=iso(ux+.275,uy+.32);
-    s+=`<circle cx="${r1(f1.X)}" cy="${r1(f1.Y-2.7)}" r="2.2" fill="#fff" stroke="#7f8b96" stroke-width=".8"/>`+
-       `<circle cx="${r1(f1.X)}" cy="${r1(f1.Y-2.7)}" r=".6" fill="#7f8b96"/>`;
-  }
+  if(b.status==="aktiv")s+=hpUnits(b,h); /* Kaskade auf dem Dach statt Einzelgerät an der Straße */
   const C=iso(b.gx+b.w,b.gy+b.d),D=iso(b.gx,b.gy+b.d);
   s+=`<text x="${r1((C.X+D.X)/2)}" y="${r1((C.Y+D.Y)/2-h*.5)}" text-anchor="middle" font-size="${b.w*b.d>1?12:9}">${TYPES[b.t].e}</text>`;
   const cx=(iso(b.gx,b.gy).X+iso(b.gx+b.w,b.gy+b.d).X)/2;
